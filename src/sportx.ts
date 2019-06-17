@@ -6,15 +6,16 @@ import {
   isHexString,
   randomBytes
 } from "ethers/utils";
+import { EventEmitter } from "events";
 import fetch from "node-fetch";
 import io from "socket.io-client";
 import {
   Environments,
   PRODUCTION_RELAYER_URL,
   RELAYER_HTTP_ENDPOINTS,
+  RELAYER_SOCKET_MESSAGE_KEYS,
   RELAYER_TIMEOUT,
-  RINKEBY_RELAYER_URL,
-  WEBSOCKET_MESSAGE_KEYS
+  RINKEBY_RELAYER_URL
 } from "./constants";
 import { APIError } from "./errors/api_error";
 import { APITimeoutError } from "./errors/api_timeout_error";
@@ -22,10 +23,11 @@ import { APISchemaError } from "./errors/schema_error";
 import {
   IRelayerCancelOrderRequest,
   IRelayerNewMakerOrder,
-  IRelayerPendingUnsettledBet,
   ISignedRelayerNewMakerOrder
 } from "./types/internal";
 import {
+  APIEventKeys,
+  IAPIActiveOrders,
   IAPIOrder,
   IAPIResponse,
   ILeague,
@@ -35,7 +37,6 @@ import {
   IPendingBet,
   ISport
 } from "./types/public";
-import { convertToDecimalOdds, convertToDisplayAmount } from "./utils/convert";
 import { getOrderSignature } from "./utils/signing";
 import {
   isAddress,
@@ -43,7 +44,7 @@ import {
   validateOrderHashArray
 } from "./utils/validation";
 
-export interface ISportX {
+export interface ISportX extends EventEmitter {
   init(): Promise<void>;
   getMetadata(): Promise<IMetadata>;
   getLeagues(): Promise<ILeague[]>;
@@ -54,17 +55,27 @@ export interface ISportX {
   getRecentPendingBets(address: string): Promise<IPendingBet[]>;
   getOrders(marketHash: string): Promise<IAPIOrder[]>;
   getActiveOrders(account: string): Promise<IAPIOrder[]>;
+  subscribeMarket(marketHash: string): Promise<IAPIResponse>;
+  unsubscribeMarket(marketHash: string): Promise<IAPIResponse>;
+  subscribeAccount(account: string): Promise<IAPIResponse>;
+  unsubscribeAccount(account: string): Promise<IAPIResponse>;
 }
 
-class SportX implements ISportX {
+class SportX extends EventEmitter implements ISportX {
   private signingWallet: Wallet;
   private relayerUrl: string;
   private initialized: boolean = false;
   private clientSocket!: SocketIOClient.Socket;
   private debug = debug("sportx-js");
   private metadata!: IMetadata;
+  private subscribedMarketHashes: string[] = [];
+  private subscribedAccounts: string[] = [];
 
   constructor(env: Environments, privateKey: string) {
+    super();
+    if (!isHexString(privateKey)) {
+      throw new Error(`${privateKey} is not a valid private key.`);
+    }
     this.signingWallet = new Wallet(privateKey);
     if (env === Environments.PRODUCTION) {
       this.relayerUrl = PRODUCTION_RELAYER_URL;
@@ -91,13 +102,25 @@ class SportX implements ISportX {
     });
     this.initialized = true;
     this.metadata = await this.getMetadata();
+    this.clientSocket.on(
+      RELAYER_SOCKET_MESSAGE_KEYS.MARKET_ORDER_BOOK,
+      (data: IAPIOrder[]) => {
+        this.emit(APIEventKeys.MARKET_ORDER_BOOK, data);
+      }
+    );
+    this.clientSocket.on(
+      RELAYER_SOCKET_MESSAGE_KEYS.ACTIVE_ORDERS,
+      (data: IAPIActiveOrders) => {
+        this.emit(APIEventKeys.ACTIVE_ORDERS, data);
+      }
+    );
     this.debug("Initialized");
   }
 
   public async getMetadata(): Promise<IMetadata> {
     const metadata = await new Promise((resolve, reject) => {
       this.clientSocket.on(
-        WEBSOCKET_MESSAGE_KEYS.METADATA,
+        RELAYER_SOCKET_MESSAGE_KEYS.METADATA,
         (data: IMetadata) => {
           this.debug("Got metadata");
           this.debug(data);
@@ -105,7 +128,7 @@ class SportX implements ISportX {
         }
       );
       this.clientSocket.emit(
-        WEBSOCKET_MESSAGE_KEYS.METADATA,
+        RELAYER_SOCKET_MESSAGE_KEYS.METADATA,
         null,
         (response: any) => {
           if (response.status !== "success") {
@@ -143,7 +166,7 @@ class SportX implements ISportX {
   public async getActiveMarkets(): Promise<IMarket[]> {
     const markets = await new Promise((resolve, reject) => {
       this.clientSocket.on(
-        WEBSOCKET_MESSAGE_KEYS.ACTIVE_MARKETS,
+        RELAYER_SOCKET_MESSAGE_KEYS.ACTIVE_MARKETS,
         (data: IMarket[]) => {
           this.debug("Got active markets");
           this.debug(data);
@@ -151,7 +174,7 @@ class SportX implements ISportX {
         }
       );
       this.clientSocket.emit(
-        WEBSOCKET_MESSAGE_KEYS.ACTIVE_MARKETS,
+        RELAYER_SOCKET_MESSAGE_KEYS.ACTIVE_MARKETS,
         null,
         (response: any) => {
           if (response.status !== "success") {
@@ -217,7 +240,7 @@ class SportX implements ISportX {
     };
     const status = await new Promise((resolve, reject) => {
       this.clientSocket.emit(
-        WEBSOCKET_MESSAGE_KEYS.NEW_ORDER,
+        RELAYER_SOCKET_MESSAGE_KEYS.NEW_ORDER,
         signedApiMakerOrder,
         (response: IAPIResponse) => {
           if (response.status === "success") {
@@ -264,7 +287,7 @@ class SportX implements ISportX {
     };
     const status = await new Promise((resolve, reject) => {
       this.clientSocket.emit(
-        WEBSOCKET_MESSAGE_KEYS.CANCEL_ORDER,
+        RELAYER_SOCKET_MESSAGE_KEYS.CANCEL_ORDER,
         payload,
         (response: IAPIResponse) => {
           if (response.status === "success") {
@@ -301,22 +324,8 @@ class SportX implements ISportX {
       `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.PENDING_BETS}/${address}`
     );
     const { data } = await response.json();
-    const pendingBets: IRelayerPendingUnsettledBet[] = data;
-    const formattedPendingBets = pendingBets.map(bet => ({
-      marketHashes: bet.marketHashes,
-      impliedOdds: bet.percentageOdds.map(odd =>
-        convertToDecimalOdds(bigNumberify(odd))
-      ),
-      isMakerBettingOutcomeOne: bet.isMakerBettingOutcomeOne,
-      taker: bet.taker,
-      fillAmounts: bet.fillAmounts.map(amount =>
-        Number(convertToDisplayAmount(bigNumberify(amount)))
-      ),
-      orderHashes: bet.orderHashes,
-      status: bet.status,
-      betTime: bet.betTime
-    }));
-    return formattedPendingBets;
+    const pendingBets: IPendingBet[] = data;
+    return pendingBets;
   }
 
   public async getOrders(marketHash: string): Promise<IAPIOrder[]> {
@@ -343,6 +352,168 @@ class SportX implements ISportX {
     const { data } = await response.json();
     const orders: IAPIOrder[] = data;
     return orders;
+  }
+
+  public async subscribeMarket(marketHash: string): Promise<IAPIResponse> {
+    if (!isHexString(marketHash)) {
+      throw new APISchemaError(`${marketHash} is not a valid hash string.`);
+    }
+    if (this.subscribedMarketHashes.includes(marketHash)) {
+      throw new Error(`${marketHash} is already subscribed.`);
+    }
+    const payload = { marketHash };
+    const status = await new Promise((resolve, reject) => {
+      this.clientSocket.emit(
+        RELAYER_SOCKET_MESSAGE_KEYS.SUBSCRIBE_MARKET,
+        payload,
+        (response: IAPIResponse) => {
+          if (response.status === "success") {
+            resolve(response);
+          } else {
+            reject(
+              new APIError(
+                `Unable to subscribe to market ${marketHash}. Status: ${
+                  response.status
+                }. Reason: ${response.reason}`
+              )
+            );
+          }
+          setTimeout(
+            () =>
+              reject(
+                new APITimeoutError(
+                  `Timeout subscribing to market ${marketHash}`
+                )
+              ),
+            RELAYER_TIMEOUT
+          );
+        }
+      );
+    });
+    this.subscribedMarketHashes.push(marketHash);
+    return status as IAPIResponse;
+  }
+
+  public async unsubscribeMarket(marketHash: string): Promise<IAPIResponse> {
+    if (!isHexString(marketHash)) {
+      throw new APISchemaError(`${marketHash} is not a valid hash string.`);
+    }
+    if (!this.subscribedMarketHashes.includes(marketHash)) {
+      throw new Error(`${marketHash} is not subscribed.`);
+    }
+    const payload = { marketHash };
+    const status = await new Promise((resolve, reject) => {
+      this.clientSocket.emit(
+        RELAYER_SOCKET_MESSAGE_KEYS.UNSUBSCRIBE_MARKET,
+        payload,
+        (response: IAPIResponse) => {
+          if (response.status === "success") {
+            resolve(response);
+          } else {
+            reject(
+              new APIError(
+                `Unable to unsubscribe to market. Status: ${
+                  response.status
+                }. Reason: ${response.reason}`
+              )
+            );
+          }
+          setTimeout(
+            () =>
+              reject(
+                new APITimeoutError(
+                  `Timeout unsubscribing to market ${marketHash}`
+                )
+              ),
+            RELAYER_TIMEOUT
+          );
+        }
+      );
+    });
+    this.subscribedMarketHashes = this.subscribedMarketHashes.filter(
+      hash => hash !== marketHash
+    );
+    return status as IAPIResponse;
+  }
+
+  public async subscribeAccount(account: string) {
+    if (!isAddress(account)) {
+      throw new APISchemaError(`${account} is not a valid address.`);
+    }
+    if (this.subscribedAccounts.includes(account)) {
+      throw new Error(`${account} is already subscribed.`);
+    }
+    const payload = { address: account };
+    const status = await new Promise((resolve, reject) => {
+      this.clientSocket.emit(
+        RELAYER_SOCKET_MESSAGE_KEYS.SUBSCRIBE_ACCOUNT,
+        payload,
+        (response: IAPIResponse) => {
+          if (response.status === "success") {
+            resolve(response);
+          } else {
+            reject(
+              new APIError(
+                `Unable to subscribe to account ${account}. Status: ${
+                  response.status
+                }. Reason: ${response.reason}`
+              )
+            );
+          }
+          setTimeout(
+            () =>
+              reject(
+                new APITimeoutError(`Timeout subscribing to account ${account}`)
+              ),
+            RELAYER_TIMEOUT
+          );
+        }
+      );
+    });
+    this.subscribedAccounts.push(account);
+    return status as IAPIResponse;
+  }
+
+  public async unsubscribeAccount(account: string) {
+    if (!isAddress(account)) {
+      throw new APISchemaError(`${account} is not a valid address`);
+    }
+    if (!this.subscribedAccounts.includes(account)) {
+      throw new Error(`${account} is not subscribed.`);
+    }
+    const payload = { address: account };
+    const status = await new Promise((resolve, reject) => {
+      this.clientSocket.emit(
+        RELAYER_SOCKET_MESSAGE_KEYS.UNSUBSCRIBE_ACCOUNT,
+        payload,
+        (response: IAPIResponse) => {
+          if (response.status === "success") {
+            resolve(response);
+          } else {
+            reject(
+              new APIError(
+                `Unable to unsubscribe to account ${account}. Status: ${
+                  response.status
+                }. Reason: ${response.reason}`
+              )
+            );
+          }
+          setTimeout(
+            () =>
+              reject(
+                new APITimeoutError(
+                  `Timeout unsubscribing to account ${account}`
+                )
+              ),
+            RELAYER_TIMEOUT
+          );
+        }
+      );
+    });
+    this.subscribedAccounts = this.subscribedAccounts.filter(
+      acc => acc !== account
+    );
+    return status as IAPIResponse;
   }
 }
 

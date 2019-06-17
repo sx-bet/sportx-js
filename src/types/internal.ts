@@ -23,19 +23,6 @@ export interface IRelayerCancelOrderRequest {
   cancelSignature: string;
 }
 
-export interface IRelayerPendingUnsettledBet {
-  marketHashes: string[],
-  percentageOdds: string[],
-  isMakerBettingOutcomeOne: boolean[],
-  taker: string,
-  fillAmounts: string[],
-  orderHashes: string[],
-  status: string,
-  betTime: number,
-  fillHash: string,
-  nonce: number
-}
-
 export interface IContractOrder {
   marketHash: string;
   maker: string;

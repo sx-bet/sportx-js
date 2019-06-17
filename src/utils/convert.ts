@@ -1,14 +1,9 @@
-import { BigNumber } from "bignumber.js";
 import {
   BigNumber as EthBigNumber,
   bigNumberify,
   formatUnits,
   parseUnits
 } from "ethers/utils";
-import {
-  FRACTION_DENOMINATOR,
-  PERCENTAGE_PRECISION_EXPONENT
-} from "../constants";
 import { IContractOrder, IRelayerNewMakerOrder } from "../types/internal";
 
 export function convertToProtocolPercentageOdds(decimal: number): EthBigNumber {
@@ -17,25 +12,6 @@ export function convertToProtocolPercentageOdds(decimal: number): EthBigNumber {
   }
   const protocolBigNum = decimal * Math.pow(10, 20);
   return bigNumberify(protocolBigNum.toString());
-}
-
-export function convertToDecimalOdds(
-  protocolImpliedOdds: EthBigNumber
-): number {
-  if (protocolImpliedOdds.gt(FRACTION_DENOMINATOR)) {
-    throw new Error(
-      `Invalid protocol odds. ${protocolImpliedOdds} greater than ${bigNumberify(
-        10
-      )
-        .pow(PERCENTAGE_PRECISION_EXPONENT)
-        .toString()}`
-    );
-  }
-  const bigNumWithDecimals = new BigNumber(protocolImpliedOdds.toString());
-  const impliedOddsWithDecimals = bigNumWithDecimals.dividedBy(
-    new BigNumber(10).exponentiatedBy(PERCENTAGE_PRECISION_EXPONENT)
-  );
-  return 1 / impliedOddsWithDecimals.toNumber();
 }
 
 export function convertToContractOrder(

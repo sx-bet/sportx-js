@@ -1,3 +1,4 @@
+import { RELAYER_SOCKET_MESSAGE_KEYS } from "../constants";
 import { ISignedRelayerNewMakerOrder } from "./internal";
 
 export interface IMetadata {
@@ -41,14 +42,16 @@ export interface IAPIResponse {
 }
 
 export interface IPendingBet {
-  marketHashes: string[],
-  impliedOdds: number[],
-  isMakerBettingOutcomeOne: boolean[],
-  taker: string,
-  fillAmounts: number[],
-  orderHashes: string[],
-  status: string,
-  betTime: number
+  marketHashes: string[];
+  percentageOdds: string[];
+  isMakerBettingOutcomeOne: boolean[];
+  taker: string;
+  fillAmounts: string[];
+  orderHashes: string[];
+  status: string;
+  betTime: number;
+  fillHash: string;
+  nonce: number;
 }
 
 export interface IMarket {
@@ -81,6 +84,15 @@ export interface IMarket {
 }
 
 export interface IAPIOrder extends ISignedRelayerNewMakerOrder {
-  orderHash: string,
-  fillAmount: string
+  orderHash: string;
+  fillAmount: string;
 }
+
+export interface IAPIActiveOrders {
+  [marketHash: string]: IAPIOrder[];
+}
+
+export const APIEventKeys = {
+  MARKET_ORDER_BOOK: RELAYER_SOCKET_MESSAGE_KEYS.MARKET_ORDER_BOOK,
+  ACTIVE_ORDERS: RELAYER_SOCKET_MESSAGE_KEYS.ACTIVE_ORDERS
+};

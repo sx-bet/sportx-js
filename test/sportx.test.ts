@@ -26,17 +26,17 @@ describe("sportx", () => {
 
   it("should get leagues", async () => {
     const leagues = await sportX.getLeagues();
-    console.log(leagues);
+    expect(leagues.length).greaterThan(0)
   });
 
   it("should get sports", async () => {
     const sports = await sportX.getSports();
-    console.log(sports);
+    expect(sports.length).greaterThan(0)
   });
 
   it("should get active markets", async () => {
     const activeMarkets = await sportX.getActiveMarkets();
-    console.log(activeMarkets);
+    expect(activeMarkets.length).greaterThan(0)
   });
 
   it("should make a new order", async () => {
@@ -52,7 +52,7 @@ describe("sportx", () => {
       isMakerBettingOutcomeOne: true
     };
     const response = await sportX.newOrder(newOrder);
-    console.log(response);
+    expect(response.status).to.equal("success")
   });
 
   it("should cancel an order", async () => {
@@ -71,7 +71,7 @@ describe("sportx", () => {
       data: { orderHash }
     } = await sportX.newOrder(newOrder);
     const response = await sportX.cancelOrder([orderHash]);
-    console.log(response);
+    expect(response.status).to.equal("success")
   });
 
   it("should get active orders for an address", async () => {
@@ -79,12 +79,40 @@ describe("sportx", () => {
     const orders = await sportX.getOrders(activeMarkets[0].marketHash);
     const maker = orders[0].maker;
     const activeOrders = await sportX.getActiveOrders(maker);
-    console.log(activeOrders)
+    expect(Object.keys(activeOrders).length).greaterThan(0)
   })
 
   it("should get active orders for a market", async () => {
     const activeMarkets = await sportX.getActiveMarkets();
     const orders = await sportX.getOrders(activeMarkets[0].marketHash);
-    console.log(orders)
+    expect(orders.length).greaterThan(0)
+  })
+
+  it("should subscribe to a market", async () => {
+    const activeMarkets = await sportX.getActiveMarkets();
+    const response = await sportX.subscribeMarket(activeMarkets[0].marketHash)
+    expect(response.status).to.equal("success")
+    await sportX.unsubscribeMarket(activeMarkets[0].marketHash);
+  })
+
+  it("should unsubscribe from a market", async () => {
+    const activeMarkets = await sportX.getActiveMarkets();
+    await sportX.subscribeMarket(activeMarkets[0].marketHash)
+    const response = await sportX.unsubscribeMarket(activeMarkets[0].marketHash);
+    expect(response.status).to.equal("success")
+  })
+
+  it("should subscribe to an account", async () => {
+    const address = await wallet.getAddress();
+    const response = await sportX.subscribeAccount(address);
+    expect(response.status).to.equal("success")
+    await sportX.unsubscribeAccount(address);
+  })
+
+  it("should unsubscribe from an account", async () => {
+    const address = await wallet.getAddress();
+    await sportX.subscribeAccount(address);
+    const response = await sportX.unsubscribeAccount(address);
+    expect(response.status).to.equal("success")
   })
 });

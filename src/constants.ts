@@ -14,7 +14,7 @@ enum Environments {
   PRODUCTION
 }
 
-export const WEBSOCKET_MESSAGE_KEYS = {
+export const RELAYER_SOCKET_MESSAGE_KEYS = {
   NEW_ORDER: "new_order",
   ACTIVE_MARKETS: "active_markets",
   SUMMARY: "summary",
@@ -26,9 +26,12 @@ export const WEBSOCKET_MESSAGE_KEYS = {
   UNSUBSCRIBE_ACCOUNT: "unsubscribe_account",
   MARKET_ORDER: "market_order",
   META_FILL_ORDER: "meta_fill_order",
+  MARKET_ORDER_BOOK: "market_order_book",
   ACTIVE_ORDERS: "active_orders",
   ORDER_BOOK: "order_book",
-  PENDING_UNSETTLED_BETS: "pending_unsettled_bets"
+  PENDING_UNSETTLED_BETS: "pending_unsettled_bets",
+  SUBSCRIBE_MARKET: "subscribe_market",
+  UNSUBSCRIBE_MARKET: "unsubscribe_market"
 };
 
 export const RELAYER_HTTP_ENDPOINTS = {
