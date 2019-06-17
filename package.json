@@ -1,0 +1,68 @@
+{
+  "name": "@sportx-bet/sportx-js",
+  "description": "Provides an easy to use API to interact with the SportX relayer.",
+  "dependencies": {
+    "bignumber.js": "^9.0.0",
+    "debug": "^4.1.1",
+    "ethers": "^4.0.28",
+    "lodash": "^4.17.11",
+    "moment": "^2.24.0",
+    "node-fetch": "^2.6.0",
+    "socket.io-client": "^2.2.0"
+  },
+  "license": "MIT",
+  "keywords": [
+    "betX",
+    "sportX",
+    "crypto",
+    "sports",
+    "betting",
+    "prediction market",
+    "DAI",
+    "market making",
+    "bot",
+    "ethereum",
+    "trading"
+  ],
+  "devDependencies": {
+    "@types/chai": "^4.1.7",
+    "@types/debug": "^4.1.4",
+    "@types/lodash": "^4.14.134",
+    "@types/mocha": "^5.2.7",
+    "@types/node-fetch": "^2.3.5",
+    "@types/socket.io-client": "^1.4.32",
+    "chai": "^4.2.0",
+    "lint-staged": "^8.1.7",
+    "mocha": "^6.1.4",
+    "prettier": "^1.17.1",
+    "tslint": "^5.16.0",
+    "tslint-config-prettier": "^1.18.0",
+    "tslint-no-unused-expression-chai": "^0.1.4",
+    "typescript": "^3.4.5"
+  },
+  "author": "SportX <contact@sportx.bet>",
+  "main": "dist/index.js",
+  "files": [
+    "/dist"
+  ],
+  "scripts": {
+    "dist": "rm -rf dist/ && tsc",
+    "compile": "tsc",
+    "lint": "tslint -c tslint.json src/**/*.ts",
+    "test": "tsc && mocha \"dist/test/*.js\" --timeout 10000 --exit --bail",
+    "format": "tslint --fix -c tslint.json test/**/*.ts scripts/**/*.ts && prettier --write test/**/*.ts src/**/*.ts"
+  },
+  "lint-staged": {
+    "src/**/*.ts": [
+      "tslint --fix -c tslint.json",
+      "prettier --write",
+      "git add"
+    ],
+    "test/**/*.ts": [
+      "tslint --fix -c tslint.json",
+      "prettier --write",
+      "git add"
+    ]
+  },
+  "version": "0.1.0"
+}
