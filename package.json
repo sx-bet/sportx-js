@@ -46,10 +46,11 @@
     "/dist"
   ],
   "scripts": {
-    "dist": "rm -rf dist/ && tsc",
+    "dist": "rm -rf dist/ && tsc -p tsconfig.dist.json",
     "compile": "tsc",
     "lint": "tslint -c tslint.json src/**/*.ts",
-    "test": "tsc && mocha \"dist/test/*.js\" --timeout 10000 --exit --bail",
+    "test": "rm -rf dist/ && tsc && mocha \"dist/test/*.js\" --timeout 10000 --exit --bail",
+    "listeners-test": "tsc && node dist/test/listeners.js",
     "format": "tslint --fix -c tslint.json test/**/*.ts scripts/**/*.ts && prettier --write test/**/*.ts src/**/*.ts"
   },
   "lint-staged": {
@@ -64,5 +65,5 @@
       "git add"
     ]
   },
-  "version": "0.1.0"
+  "version": "0.2.0"
 }
