@@ -4,7 +4,7 @@ import { bigNumberify, isHexString } from "ethers/utils";
 import _ from "lodash";
 import moment from "moment";
 import { FRACTION_DENOMINATOR } from "../constants";
-import { convertToProtocolPercentageOdds } from "./convert";
+import { convertToAPIPercentageOdds } from "./convert";
 
 export function validateOrderHashArray(orderHashes: any) {
   if (!_.isArray(orderHashes)) {
@@ -83,7 +83,7 @@ export function validateINewOrderSchema(order: any) {
   }
   if (
     !isPositiveBigNumber(order.percentageOdds) ||
-    bigNumberify(order.percentageOdds).gte(convertToProtocolPercentageOdds(1))
+    bigNumberify(order.percentageOdds).gte(convertToAPIPercentageOdds(1))
   ) {
     return "impliedOdds must be between 0 and 1 exclusive.";
   }

@@ -9,6 +9,7 @@ export * from "./sportx";
 export * from "./types/public";
 export {
   convertToDisplayAmount,
-  convertToProtocolPercentageOdds,
-  convertToTrueTokenAmount
+  convertToAPIPercentageOdds,
+  convertToTrueTokenAmount,
+  convertFromAPIPercentageOdds
 } from "./utils/convert";
