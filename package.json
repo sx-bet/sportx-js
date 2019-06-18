@@ -10,6 +10,8 @@
     "node-fetch": "^2.6.0",
     "socket.io-client": "^2.2.0"
   },
+  "repository": "github:sportx-bet/sportx-js",
+  "homepage": "https://github.com/sportx-bet/sportx-js",
   "license": "MIT",
   "keywords": [
     "betX",
