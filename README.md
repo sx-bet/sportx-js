@@ -9,11 +9,11 @@ Questions? [Join our chat](https://discord.gg/xXUynCX)
 
 ## Install
 
-`yarn add sportx-js`
+`yarn add @sportx-bet/sportx-js`
 
 or
 
-`npm i sportx-js`
+`npm i @sportx-bet/sportx-js`
 
 This library is written in TypeScript and compiled down to ES6.
 
