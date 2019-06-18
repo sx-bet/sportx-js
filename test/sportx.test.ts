@@ -6,7 +6,7 @@ import moment from "moment";
 import { INewOrder } from "../src";
 import { Environments } from "../src/constants";
 import { ISportX, newSportX } from "../src/sportx";
-import { convertToProtocolPercentageOdds } from "../src/utils/convert";
+import { convertFromAPIPercentageOdds, convertToAPIPercentageOdds, convertToTrueTokenAmount } from "../src/utils/convert";
 
 const TEST_MNEMONIC =
   "elegant execute say gain evil afford puppy upon amateur planet lunar pen";
@@ -44,8 +44,8 @@ describe("sportx", () => {
     const firstMarketHash = activeMarkets[0].marketHash;
     const newOrder: INewOrder = {
       marketHash: firstMarketHash,
-      totalBetSize: parseUnits("10", 18).toString(),
-      percentageOdds: convertToProtocolPercentageOdds(0.5).toString(),
+      totalBetSize: convertToTrueTokenAmount(10).toString(),
+      percentageOdds: convertToAPIPercentageOdds(0.5).toString(),
       expiry: moment()
         .add(1, "hour")
         .unix(),
@@ -61,7 +61,7 @@ describe("sportx", () => {
     const newOrder: INewOrder = {
       marketHash: firstMarketHash,
       totalBetSize: parseUnits("10", 18).toString(),
-      percentageOdds: convertToProtocolPercentageOdds(0.5).toString(),
+      percentageOdds: convertToAPIPercentageOdds(0.5).toString(),
       expiry: moment()
         .add(1, "hour")
         .unix(),
@@ -73,6 +73,12 @@ describe("sportx", () => {
     const response = await sportX.cancelOrder([orderHash]);
     expect(response.status).to.equal("success")
   });
+
+  it("should convert from protocol percentage odds", () => {
+    const odds = "88985727650227679586"
+    const convertedOdds = convertFromAPIPercentageOdds(odds);
+    expect(convertedOdds).to.equal(0.8898572765022768)
+  })
 
   it("should get active orders for an address", async () => {
     const activeMarkets = await sportX.getActiveMarkets();
