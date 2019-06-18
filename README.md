@@ -4,8 +4,7 @@ Be your own bookmaker with the SportX API!
 
 *Note that filling orders is currently not supported - coming soon!*
 
-Questions? [Join our chat](https://www.npmjs.com/package/@sportx-bet/sportx-js)
-
+Questions? [Join our chat](https://discord.gg/xXUynCX)
 
 
 ## Install
@@ -432,7 +431,7 @@ Which produces orders grouped by market hash as keys:
        "relayer": "0xEBF9c090bb9E9cea54c1f5eC23c238aB42922289",
        "salt":
         "35485978637141361876232738522929776286192680166268767752859378082539513060903",
-       "executor": '"0xEBF9c090bb9E9cea54c1f5eC23c238aB42922289",
+       "executor": "0xEBF9c090bb9E9cea54c1f5eC23c238aB42922289",
        "isMakerBettingOutcomeOne": false,
        "signature":
         "0xf2f0210f328eb04878496a6f970cc400672db524fd5650bf9ca42ce1774060082a040dc6e85bde539602babcb1e97d295f6a6078436d40bef1d4ac7319081ad81c" },
@@ -445,8 +444,8 @@ Which produces orders grouped by market hash as keys:
        "totalBetSize": "500000000000000000000",
        "percentageOdds": "36058315409643831747",
        "expiry": 1560884400,
-       "relayerMakerFee": '0',
-       "relayerTakerFee": '0',
+       "relayerMakerFee": "0",
+       "relayerTakerFee": "0",
        "relayer": "0xEBF9c090bb9E9cea54c1f5eC23c238aB42922289",
        "salt":
         "78496959933119259419935033215094016205058812453361105019042873506621461421155",
