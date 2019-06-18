@@ -4,10 +4,7 @@ Be your own bookmaker with the SportX API!
 
 *Note that filling orders is currently not supported - coming soon!*
 
-Questions? Join our chat
-
-[![Discord Chat](https://img.shields.io/discord/308323056592486420.svg)](https://discord.gg/xXUynCX)
-[![NPM Version](https://img.shields.io/npm/v/npm.svg?style=flat)](https://www.npmjs.com/package/@sportx-bet/sportx-js)
+Questions? [Join our chat](https://www.npmjs.com/package/@sportx-bet/sportx-js)
 
 
 
