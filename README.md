@@ -635,6 +635,13 @@ Which, if successful, produces
 
 If it failed, it will throw an `APISchemaError` or `APIError` depending on the type of error (former would be validation and latter would be an error from the API).
 
+## Debugging
+We use https://www.npmjs.com/package/debug to provide debugging support for consumers of this package. Simply 
+
+`export DEBUG=sportx-js`
+
+and you will see raw responses from the SportX relayer.
+
 
 
 

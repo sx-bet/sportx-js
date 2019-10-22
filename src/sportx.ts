@@ -171,9 +171,10 @@ class SportX extends EventEmitter implements ISportX {
     const response = await fetch(
       `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.LEAGUES}`
     );
-    const { data } = await response.json();
-    this.debug("Got leagues");
-    this.debug(data);
+    const jsonResponse = await response.json();
+    this.debug("Relayer response")
+    this.debug(jsonResponse)
+    const { data } = jsonResponse;
     return data as ILeague[];
   }
 
@@ -182,9 +183,10 @@ class SportX extends EventEmitter implements ISportX {
     const response = await fetch(
       `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.SPORTS}`
     );
-    const { data } = await response.json();
-    this.debug("Got sports");
-    this.debug(data);
+    const jsonResponse = await response.json();
+    this.debug("Relayer response");
+    this.debug(jsonResponse);
+    const { data } = jsonResponse;
     return data as ISport[];
   }
 
@@ -203,6 +205,8 @@ class SportX extends EventEmitter implements ISportX {
         RELAYER_SOCKET_MESSAGE_KEYS.ACTIVE_MARKETS,
         null,
         (response: any) => {
+          this.debug("Active markets response")
+          this.debug(response)
           if (response.status !== "success") {
             reject(
               new Error(
@@ -401,11 +405,15 @@ class SportX extends EventEmitter implements ISportX {
       fillSalt: fillSalt.toString(),
       submitterFee: submitterFee.toString()
     };
+    this.debug("Meta fill payload");
+    this.debug(payload);
     const status = await new Promise((resolve, reject) => {
       this.clientSocket.emit(
         RELAYER_SOCKET_MESSAGE_KEYS.META_FILL_ORDER,
         payload,
         (response: IRelayerResponse) => {
+          this.debug("Relayer response");
+          this.debug(response);
           if (response.status === "success") {
             resolve(response);
           } else {
@@ -451,11 +459,15 @@ class SportX extends EventEmitter implements ISportX {
       orderHashes,
       cancelSignature
     };
+    this.debug("Cancel order payload");
+    this.debug(payload);
     const status = await new Promise((resolve, reject) => {
       this.clientSocket.emit(
         RELAYER_SOCKET_MESSAGE_KEYS.CANCEL_ORDER,
         payload,
         (response: IRelayerResponse) => {
+          this.debug("Relayer response");
+          this.debug(response);
           if (response.status === "success") {
             resolve(response);
           } else {
@@ -495,7 +507,9 @@ class SportX extends EventEmitter implements ISportX {
     return pendingBets;
   }
 
-  public async getOrders(marketHash: string): Promise<IDetailedRelayerMakerOrder[]> {
+  public async getOrders(
+    marketHash: string
+  ): Promise<IDetailedRelayerMakerOrder[]> {
     this.debug("getOrders");
     if (!isHexString(marketHash)) {
       throw new APISchemaError(
@@ -510,7 +524,9 @@ class SportX extends EventEmitter implements ISportX {
     return orders;
   }
 
-  public async getActiveOrders(account: string): Promise<IDetailedRelayerMakerOrder[]> {
+  public async getActiveOrders(
+    account: string
+  ): Promise<IDetailedRelayerMakerOrder[]> {
     this.debug("getActiveOrders");
     if (!isAddress(account)) {
       throw new APISchemaError(`Address ${account} is not a valid address`);
@@ -518,7 +534,10 @@ class SportX extends EventEmitter implements ISportX {
     const response = await fetch(
       `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.ACTIVE_ORDERS}/${account}`
     );
-    const { data } = await response.json();
+    const jsonResponse = await response.json();
+    this.debug("Active orders response");
+    this.debug(jsonResponse);
+    const { data } = jsonResponse;
     const orders: IDetailedRelayerMakerOrder[] = data;
     return orders;
   }
@@ -537,6 +556,8 @@ class SportX extends EventEmitter implements ISportX {
         RELAYER_SOCKET_MESSAGE_KEYS.SUBSCRIBE_MARKET,
         payload,
         (response: IRelayerResponse) => {
+          this.debug("Subscribe market response");
+          this.debug(response);
           if (response.status === "success") {
             resolve(response);
           } else {
@@ -580,6 +601,8 @@ class SportX extends EventEmitter implements ISportX {
         RELAYER_SOCKET_MESSAGE_KEYS.UNSUBSCRIBE_MARKET,
         payload,
         (response: IRelayerResponse) => {
+          this.debug("Unsubscribe market response");
+          this.debug(response);
           if (response.status === "success") {
             resolve(response);
           } else {
@@ -623,6 +646,8 @@ class SportX extends EventEmitter implements ISportX {
         RELAYER_SOCKET_MESSAGE_KEYS.SUBSCRIBE_ACCOUNT,
         payload,
         (response: IRelayerResponse) => {
+          this.debug("Subscribe account response");
+          this.debug(response);
           if (response.status === "success") {
             resolve(response);
           } else {
@@ -662,6 +687,8 @@ class SportX extends EventEmitter implements ISportX {
         RELAYER_SOCKET_MESSAGE_KEYS.UNSUBSCRIBE_ACCOUNT,
         payload,
         (response: IRelayerResponse) => {
+          this.debug("Unsubscribe account response");
+          this.debug(response);
           if (response.status === "success") {
             resolve(response);
           } else {

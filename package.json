@@ -5,7 +5,7 @@
     "bignumber.js": "^9.0.0",
     "debug": "^4.1.1",
     "ethers": "^4.0.28",
-    "lodash": "^4.17.11",
+    "lodash": "^4.17.15",
     "moment": "^2.24.0",
     "node-fetch": "^2.6.0",
     "socket.io-client": "^2.2.0"
@@ -29,7 +29,7 @@
   "devDependencies": {
     "@types/chai": "^4.1.7",
     "@types/debug": "^4.1.4",
-    "@types/lodash": "^4.14.134",
+    "@types/lodash": "^4.14.144",
     "@types/mocha": "^5.2.7",
     "@types/node-fetch": "^2.3.5",
     "@types/socket.io-client": "^1.4.32",
