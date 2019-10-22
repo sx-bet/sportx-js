@@ -1,8 +1,6 @@
 # sportx-js
 
-Be your own bookmaker with the SportX API!
-
-*Note that filling orders is currently not supported - coming soon!*
+Be your own bookmaker and fill orders programmatically with the SportX API!
 
 Questions? [Join our chat](https://discord.gg/xXUynCX)
 
@@ -27,9 +25,11 @@ You can do the following things with this API:
 4. Submit a new order to a market
 5. Cancel an existing order
 6. Get all orders on a market
-7. Get all active orders for an account
-8. Subscribe to a market and get updates when that market's orders change
-9. Subscribe to an address and get updates when that addresses' bookmaker orders change
+7. Get suggestions of orders to fill (gives you the orders with the best odds)
+8. Fill order(s)
+9. Get all active orders for an account
+10. Subscribe to a market and get updates when that market's orders change
+11.  Subscribe to an address and get updates when that addresses' bookmaker orders change
 
 In any case, to get started, you'll need your private key and the environment you want to use. We recommend starting on rinkeby first. Example:
 
@@ -402,6 +402,78 @@ The below are for information purposes only and not needed to operate this API.
 `executor` is the address actually submitting the transaction to fill the order on the blockchain
 
 `signature` is the signature on the order payload by the maker to verify that the maker did indeed create this order. 
+
+
+### Get fill suggestions
+The API has a utility method to suggest to the orders with the best odds based on how much you want to fill. You can call `suggestOrders(marketHash, betSize, takerDirectionOutcomeOne, taker)` to receive the suggestions.
+
+Example:
+
+```typescript
+const suggestions = await sportX.suggestOrders("0xb3f686d972a91adecfd0d0b53a66fbbeffd4965a11519df6dbdc12d6ebc4b94e", "0x75BC4c86e7e096732a9a562dcc79a14D95784590", true, "15000000000000000000")
+```
+
+Which produces:
+
+```json
+{
+  "fillAmounts": ["13204264472968820177"],
+  "orderHashes": ["0x4291f23f6d05788386b213a79271ff3ebfd72687952a38fde0f0564223fe13f2"]
+}
+```
+
+Typically, you would use these "suggestions" to actually fill an order. See the next section.
+
+### Filling orders
+To actually fill orders on SportX, you will need the actual orders themselves which you can obtain from `getOrders(marketHash)` as well as the amount(s) you want to fill each order. 
+
+The orders are filled meta style, meaning that the filler does not pay for gas and instead the user just signs an "intent to fill" hash. The API covers the gas fee. 
+
+The signature is 
+
+`fillOrders(orders: IRelayerMakerOrder[], betAmounts: string[])`
+
+Alternatively, you can use the `suggestOrders(marketHash, betSize, takerDirectionOutcomeOne, taker)` method above to suggest to you the `orderHashes` with the best odds given your `betSize`. 
+
+*Note that you will still need to get the actual orders themselves from `getOrders(marketHash)`. You will need to find the orders in the `getOrders(marketHash)` response whose orderHashe(s) match up.*
+
+There are superfluous fields that `getOrders(marketHash)` returns such as `signature` and `fillAmount`. You can keep these and pass the whole object to `fillOrders`.
+
+Example (filling one order):
+
+```typescript
+const orders = [
+  {
+    executor: "0xEBF9c090bb9E9cea54c1f5eC23c238aB42922289"
+    expiry: 1571763300
+    isMakerBettingOutcomeOne: false
+    maker: "0xE5F5cC7496b2B39F0a76442Bc8De0E7FEedc7e55"
+    marketHash: "0x6fb98d18da6658435f7bdc645e30aa103882f3f5a814b6e64bf6829d5bb7af11"
+    percentageOdds: "56827118644067796610"
+    relayer: "0xEBF9c090bb9E9cea54c1f5eC23c238aB42922289"
+    relayerMakerFee: "0"
+    relayerTakerFee: "0"
+    salt: "109465971184042040832918255631084373861510812876584310918706085768814010131009"
+    totalBetSize: "250000000000000000000"
+  }
+];
+const fillAmounts = [
+  "200000000000000000000"
+];
+const result = await sportX.fillOrders(orders, fillAmounts);
+console.log(result)
+```
+
+Which produces, if successful:
+
+```json
+{
+  "status": "success",
+  "hash": "0x1783ab84c367309ed2038c818c864501757418c61f25b6da617f83f64adce45c"
+}
+```
+
+This hash is a transaction hash for the actual ethereum transaction which you can track. Note that this might not be the final transaction! Depending on gas prices, the SportX relayer will retry to submit the bet until it is successful. However, at this point, the bet is confirmed.  
 
 
 ### Get all active orders for an account
