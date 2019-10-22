@@ -1,5 +1,59 @@
 import { RELAYER_SOCKET_MESSAGE_KEYS } from "../constants";
-import { ISignedRelayerNewMakerOrder } from "./internal";
+import { ISignedRelayerMakerOrder } from "./relayer";
+
+export interface IRelayerMakerOrder {
+  marketHash: string;
+  maker: string;
+  totalBetSize: string;
+  percentageOdds: string;
+  expiry: string;
+  relayerTakerFee: string;
+  executor: string;
+  relayerMakerFee: string;
+  relayer: string;
+  salt: string;
+  isMakerBettingOutcomeOne: boolean;
+}
+
+export interface ISignedRelayerMakerOrder extends IRelayerMakerOrder {
+  signature: string;
+}
+
+export interface IRelayerCancelOrderRequest {
+  orderHashes: string[];
+  cancelSignature: string;
+}
+
+export interface IRelayerMarketOrderRequest {
+  marketHash: string;
+  takerPayAmount: string;
+  takerDirection: "outcomeOne" | "outcomeTwo";
+  taker: string;
+}
+
+export interface IRelayerMetaFillOrderRequest {
+  orderHashes: string[];
+  takerAmounts: string[];
+  taker: string;
+  takerSig: string;
+  fillSalt: string;
+  submitterFee: string;
+}
+
+export interface IDetailedRelayerMakerOrder extends ISignedRelayerMakerOrder {
+  orderHash: string;
+  fillAmount: string;
+}
+
+export interface IRelayerActiveOrders {
+  [marketHash: string]: IDetailedRelayerMakerOrder[];
+}
+
+export interface IRelayerResponse {
+  status: string;
+  data?: any;
+  reason?: string;
+}
 
 export interface IMetadata {
   relayerAddress: string;
@@ -34,11 +88,6 @@ export interface INewOrder {
   percentageOdds: string;
   expiry: number;
   isMakerBettingOutcomeOne: boolean;
-}
-export interface IAPIResponse {
-  status: string;
-  data?: any;
-  reason?: string;
 }
 
 export interface IPendingBet {
@@ -83,16 +132,7 @@ export interface IMarket {
   leagueLabel?: string;
 }
 
-export interface IAPIOrder extends ISignedRelayerNewMakerOrder {
-  orderHash: string;
-  fillAmount: string;
-}
-
-export interface IAPIActiveOrders {
-  [marketHash: string]: IAPIOrder[];
-}
-
-export const APIEventKeys = {
+export const RelayerEventKeys = {
   MARKET_ORDER_BOOK: RELAYER_SOCKET_MESSAGE_KEYS.MARKET_ORDER_BOOK,
   ACTIVE_ORDERS: RELAYER_SOCKET_MESSAGE_KEYS.ACTIVE_ORDERS
 };

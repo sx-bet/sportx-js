@@ -1,5 +1,6 @@
 import debug from "debug";
 import { utils, Wallet } from "ethers";
+import { Zero } from "ethers/constants";
 import {
   bigNumberify,
   formatUnits,
@@ -9,6 +10,7 @@ import {
 import { EventEmitter } from "events";
 import fetch from "node-fetch";
 import io from "socket.io-client";
+import { isArray, isBoolean } from "util";
 import {
   Environments,
   PRODUCTION_RELAYER_URL,
@@ -21,27 +23,33 @@ import { APIError } from "./errors/api_error";
 import { APITimeoutError } from "./errors/api_timeout_error";
 import { APISchemaError } from "./errors/schema_error";
 import {
-  IRelayerCancelOrderRequest,
-  IRelayerNewMakerOrder,
-  ISignedRelayerNewMakerOrder
-} from "./types/internal";
-import {
-  APIEventKeys,
-  IAPIActiveOrders,
-  IAPIOrder,
-  IAPIResponse,
+  IDetailedRelayerMakerOrder,
   ILeague,
   IMarket,
   IMetadata,
   INewOrder,
   IPendingBet,
-  ISport
-} from "./types/public";
-import { getOrderSignature } from "./utils/signing";
+  IRelayerActiveOrders,
+  IRelayerCancelOrderRequest,
+  IRelayerMakerOrder,
+  IRelayerMarketOrderRequest,
+  IRelayerMetaFillOrderRequest,
+  IRelayerResponse,
+  ISignedRelayerMakerOrder,
+  ISport,
+  RelayerEventKeys
+} from "./types/relayer";
+import { convertToContractOrder } from "./utils/convert";
+import {
+  getMultiFillHash,
+  getOrderHash,
+  getOrderSignature
+} from "./utils/signing";
 import {
   isAddress,
+  isPositiveBigNumber,
   validateINewOrderSchema,
-  validateOrderHashArray
+  validateIRelayerMakerOrder
 } from "./utils/validation";
 
 export interface ISportX extends EventEmitter {
@@ -50,15 +58,25 @@ export interface ISportX extends EventEmitter {
   getLeagues(): Promise<ILeague[]>;
   getSports(): Promise<ISport[]>;
   getActiveMarkets(): Promise<IMarket[]>;
-  newOrder(order: INewOrder): Promise<IAPIResponse>;
-  cancelOrder(orderHashes: string[]): Promise<IAPIResponse>;
+  newOrder(order: INewOrder): Promise<IRelayerResponse>;
+  cancelOrder(orderHashes: string[]): Promise<IRelayerResponse>;
   getRecentPendingBets(address: string): Promise<IPendingBet[]>;
-  getOrders(marketHash: string): Promise<IAPIOrder[]>;
-  getActiveOrders(account: string): Promise<IAPIOrder[]>;
-  subscribeMarket(marketHash: string): Promise<IAPIResponse>;
-  unsubscribeMarket(marketHash: string): Promise<IAPIResponse>;
-  subscribeAccount(account: string): Promise<IAPIResponse>;
-  unsubscribeAccount(account: string): Promise<IAPIResponse>;
+  getOrders(marketHash: string): Promise<IDetailedRelayerMakerOrder[]>;
+  getActiveOrders(account: string): Promise<IDetailedRelayerMakerOrder[]>;
+  subscribeMarket(marketHash: string): Promise<IRelayerResponse>;
+  fillOrders(
+    orders: IRelayerMakerOrder[],
+    takerAmounts: string[]
+  ): Promise<IRelayerResponse>;
+  unsubscribeMarket(marketHash: string): Promise<IRelayerResponse>;
+  subscribeAccount(account: string): Promise<IRelayerResponse>;
+  suggestOrders(
+    marketHash: string,
+    betSize: string,
+    takerDirectionOutcomeOne: boolean,
+    taker: string
+  ): Promise<IRelayerResponse>;
+  unsubscribeAccount(account: string): Promise<IRelayerResponse>;
 }
 
 class SportX extends EventEmitter implements ISportX {
@@ -104,20 +122,21 @@ class SportX extends EventEmitter implements ISportX {
     this.metadata = await this.getMetadata();
     this.clientSocket.on(
       RELAYER_SOCKET_MESSAGE_KEYS.MARKET_ORDER_BOOK,
-      (data: IAPIOrder[]) => {
-        this.emit(APIEventKeys.MARKET_ORDER_BOOK, data);
+      (data: IDetailedRelayerMakerOrder[]) => {
+        this.emit(RelayerEventKeys.MARKET_ORDER_BOOK, data);
       }
     );
     this.clientSocket.on(
       RELAYER_SOCKET_MESSAGE_KEYS.ACTIVE_ORDERS,
-      (data: IAPIActiveOrders) => {
-        this.emit(APIEventKeys.ACTIVE_ORDERS, data);
+      (data: IRelayerActiveOrders) => {
+        this.emit(RelayerEventKeys.ACTIVE_ORDERS, data);
       }
     );
     this.debug("Initialized");
   }
 
   public async getMetadata(): Promise<IMetadata> {
+    this.debug("getMetadata");
     const metadata = await new Promise((resolve, reject) => {
       this.clientSocket.on(
         RELAYER_SOCKET_MESSAGE_KEYS.METADATA,
@@ -148,22 +167,29 @@ class SportX extends EventEmitter implements ISportX {
   }
 
   public async getLeagues(): Promise<ILeague[]> {
+    this.debug("getLeagues");
     const response = await fetch(
       `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.LEAGUES}`
     );
     const { data } = await response.json();
+    this.debug("Got leagues");
+    this.debug(data);
     return data as ILeague[];
   }
 
   public async getSports(): Promise<ISport[]> {
+    this.debug("getSports");
     const response = await fetch(
       `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.SPORTS}`
     );
     const { data } = await response.json();
+    this.debug("Got sports");
+    this.debug(data);
     return data as ISport[];
   }
 
   public async getActiveMarkets(): Promise<IMarket[]> {
+    this.debug("getActiveMarkets");
     const markets = await new Promise((resolve, reject) => {
       this.clientSocket.on(
         RELAYER_SOCKET_MESSAGE_KEYS.ACTIVE_MARKETS,
@@ -200,6 +226,7 @@ class SportX extends EventEmitter implements ISportX {
   }
 
   public async newOrder(order: INewOrder) {
+    this.debug("newOrder");
     const schemaValidation = validateINewOrderSchema(order);
     if (schemaValidation !== "OK") {
       throw new APISchemaError(schemaValidation);
@@ -217,7 +244,7 @@ class SportX extends EventEmitter implements ISportX {
       );
     }
     const salt = bigNumberify(randomBytes(32)).toString();
-    const apiMakerOrder: IRelayerNewMakerOrder = {
+    const apiMakerOrder: IRelayerMakerOrder = {
       marketHash: order.marketHash,
       maker: this.signingWallet.address,
       totalBetSize: bigNumBetSize.toString(),
@@ -230,11 +257,14 @@ class SportX extends EventEmitter implements ISportX {
       salt,
       isMakerBettingOutcomeOne: order.isMakerBettingOutcomeOne
     };
+    this.debug(`New order`);
+    this.debug(apiMakerOrder);
     const signature = await getOrderSignature(
       apiMakerOrder,
       this.signingWallet
     );
-    const signedApiMakerOrder: ISignedRelayerNewMakerOrder = {
+    this.debug(`New order signature: ${signature}`);
+    const signedApiMakerOrder: ISignedRelayerMakerOrder = {
       ...apiMakerOrder,
       signature
     };
@@ -242,7 +272,9 @@ class SportX extends EventEmitter implements ISportX {
       this.clientSocket.emit(
         RELAYER_SOCKET_MESSAGE_KEYS.NEW_ORDER,
         signedApiMakerOrder,
-        (response: IAPIResponse) => {
+        (response: IRelayerResponse) => {
+          this.debug("Response from relayer for new order");
+          this.debug(response);
           if (response.status === "success") {
             resolve(response);
           } else {
@@ -266,30 +298,43 @@ class SportX extends EventEmitter implements ISportX {
         RELAYER_TIMEOUT
       );
     });
-    return status as IAPIResponse;
+    return status as IRelayerResponse;
   }
 
-  public async cancelOrder(orderHashes: string[]) {
-    const schemaValidation = validateOrderHashArray(orderHashes);
-    if (schemaValidation !== "OK") {
-      throw new APISchemaError(schemaValidation);
+  public async suggestOrders(
+    marketHash: string,
+    betSize: string,
+    takerDirectionOutcomeOne: boolean,
+    taker: string
+  ) {
+    this.debug("suggestOrders");
+    if (!isHexString(marketHash)) {
+      throw new APISchemaError("marketHash is not a hex string ");
     }
-    const signingPayload = utils.solidityKeccak256(
-      [...orderHashes.map(() => "bytes32"), "bool"],
-      [...orderHashes, true]
-    );
-    const cancelSignature = await this.signingWallet.signMessage(
-      utils.arrayify(signingPayload)
-    );
-    const payload: IRelayerCancelOrderRequest = {
-      orderHashes,
-      cancelSignature
+    if (!isPositiveBigNumber(betSize)) {
+      throw new APISchemaError("betSize as a number is not positive");
+    }
+    if (!isBoolean(takerDirectionOutcomeOne)) {
+      throw new APISchemaError("takerDirectionOutcomeOne is not a boolean");
+    }
+    if (!isAddress(taker)) {
+      throw new APISchemaError("taker is not a valid address");
+    }
+    const payload: IRelayerMarketOrderRequest = {
+      marketHash,
+      takerPayAmount: betSize,
+      takerDirection: takerDirectionOutcomeOne ? "outcomeOne" : "outcomeTwo",
+      taker
     };
+    this.debug("Suggest orders payload:");
+    this.debug(payload);
     const status = await new Promise((resolve, reject) => {
       this.clientSocket.emit(
-        RELAYER_SOCKET_MESSAGE_KEYS.CANCEL_ORDER,
+        RELAYER_SOCKET_MESSAGE_KEYS.MARKET_ORDER,
         payload,
-        (response: IAPIResponse) => {
+        (response: IRelayerResponse) => {
+          this.debug("Response from relayer for suggest orders");
+          this.debug(response);
           if (response.status === "success") {
             resolve(response);
           } else {
@@ -313,10 +358,132 @@ class SportX extends EventEmitter implements ISportX {
         RELAYER_TIMEOUT
       );
     });
-    return status as IAPIResponse;
+    return status as IRelayerResponse;
+  }
+
+  public async fillOrders(
+    orders: IRelayerMakerOrder[],
+    takerAmounts: string[]
+  ): Promise<IRelayerResponse> {
+    this.debug("fillOrders");
+    orders.forEach(order => {
+      const validation = validateIRelayerMakerOrder(order);
+      if (validation !== "OK") {
+        this.debug("One of the orders is malformed");
+        throw new APISchemaError(validation);
+      }
+    });
+    if (!isArray(takerAmounts)) {
+      throw new APISchemaError("takerAmounts is not an array");
+    }
+    if (!takerAmounts.every(amount => isPositiveBigNumber(amount))) {
+      throw new APISchemaError("takerAmounts has some invalid number strings");
+    }
+    const fillSalt = bigNumberify(randomBytes(32));
+    const submitterFee = Zero;
+    const solidityOrders = orders.map(convertToContractOrder);
+    const orderHashes = solidityOrders.map(getOrderHash);
+    const bigNumTakerAmounts = takerAmounts.map(bigNumberify);
+    const fillHash = getMultiFillHash(
+      solidityOrders,
+      bigNumTakerAmounts,
+      fillSalt,
+      submitterFee
+    );
+    const takerSignature = await this.signingWallet.signMessage(
+      utils.arrayify(fillHash)
+    );
+    const payload: IRelayerMetaFillOrderRequest = {
+      orderHashes,
+      takerAmounts,
+      taker: this.signingWallet.address,
+      takerSig: takerSignature,
+      fillSalt: fillSalt.toString(),
+      submitterFee: submitterFee.toString()
+    };
+    const status = await new Promise((resolve, reject) => {
+      this.clientSocket.emit(
+        RELAYER_SOCKET_MESSAGE_KEYS.META_FILL_ORDER,
+        payload,
+        (response: IRelayerResponse) => {
+          if (response.status === "success") {
+            resolve(response);
+          } else {
+            reject(
+              new APIError(
+                `Unable to fill order. Status: ${response.status}. Reason: ${
+                  response.reason
+                }`
+              )
+            );
+          }
+        }
+      );
+      setTimeout(
+        () =>
+          reject(
+            new APITimeoutError(
+              "Timeout getting submitting order to the SportX API"
+            )
+          ),
+        RELAYER_TIMEOUT
+      );
+    });
+    return status as IRelayerResponse;
+  }
+
+  public async cancelOrder(orderHashes: string[]) {
+    this.debug("cancelOrder");
+    if (!isArray(orderHashes)) {
+      throw new APISchemaError("orderHashes is not an array");
+    }
+    if (!orderHashes.every(hash => isHexString(hash))) {
+      throw new APISchemaError("orderHashes has some invalid order hashes.");
+    }
+    const signingPayload = utils.solidityKeccak256(
+      [...orderHashes.map(() => "bytes32"), "bool"],
+      [...orderHashes, true]
+    );
+    const cancelSignature = await this.signingWallet.signMessage(
+      utils.arrayify(signingPayload)
+    );
+    const payload: IRelayerCancelOrderRequest = {
+      orderHashes,
+      cancelSignature
+    };
+    const status = await new Promise((resolve, reject) => {
+      this.clientSocket.emit(
+        RELAYER_SOCKET_MESSAGE_KEYS.CANCEL_ORDER,
+        payload,
+        (response: IRelayerResponse) => {
+          if (response.status === "success") {
+            resolve(response);
+          } else {
+            reject(
+              new APIError(
+                `Unable to cancel order. Status: ${response.status}. Reason: ${
+                  response.reason
+                }`
+              )
+            );
+          }
+        }
+      );
+      setTimeout(
+        () =>
+          reject(
+            new APITimeoutError(
+              "Timeout getting submitting order to the SportX API"
+            )
+          ),
+        RELAYER_TIMEOUT
+      );
+    });
+    return status as IRelayerResponse;
   }
 
   public async getRecentPendingBets(address: string): Promise<IPendingBet[]> {
+    this.debug("getRecentPendingBets");
     if (!isAddress(address)) {
       throw new APISchemaError(`Address ${address} is not a valid address`);
     }
@@ -328,7 +495,8 @@ class SportX extends EventEmitter implements ISportX {
     return pendingBets;
   }
 
-  public async getOrders(marketHash: string): Promise<IAPIOrder[]> {
+  public async getOrders(marketHash: string): Promise<IDetailedRelayerMakerOrder[]> {
+    this.debug("getOrders");
     if (!isHexString(marketHash)) {
       throw new APISchemaError(
         `Market hash ${marketHash} is not a valid hash string.`
@@ -338,11 +506,12 @@ class SportX extends EventEmitter implements ISportX {
       `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.ORDERS}/${marketHash}`
     );
     const { data } = await response.json();
-    const orders: IAPIOrder[] = data;
+    const orders: IDetailedRelayerMakerOrder[] = data;
     return orders;
   }
 
-  public async getActiveOrders(account: string): Promise<IAPIOrder[]> {
+  public async getActiveOrders(account: string): Promise<IDetailedRelayerMakerOrder[]> {
+    this.debug("getActiveOrders");
     if (!isAddress(account)) {
       throw new APISchemaError(`Address ${account} is not a valid address`);
     }
@@ -350,11 +519,12 @@ class SportX extends EventEmitter implements ISportX {
       `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.ACTIVE_ORDERS}/${account}`
     );
     const { data } = await response.json();
-    const orders: IAPIOrder[] = data;
+    const orders: IDetailedRelayerMakerOrder[] = data;
     return orders;
   }
 
-  public async subscribeMarket(marketHash: string): Promise<IAPIResponse> {
+  public async subscribeMarket(marketHash: string): Promise<IRelayerResponse> {
+    this.debug("subscribeMarket");
     if (!isHexString(marketHash)) {
       throw new APISchemaError(`${marketHash} is not a valid hash string.`);
     }
@@ -366,7 +536,7 @@ class SportX extends EventEmitter implements ISportX {
       this.clientSocket.emit(
         RELAYER_SOCKET_MESSAGE_KEYS.SUBSCRIBE_MARKET,
         payload,
-        (response: IAPIResponse) => {
+        (response: IRelayerResponse) => {
           if (response.status === "success") {
             resolve(response);
           } else {
@@ -391,10 +561,13 @@ class SportX extends EventEmitter implements ISportX {
       );
     });
     this.subscribedMarketHashes.push(marketHash);
-    return status as IAPIResponse;
+    return status as IRelayerResponse;
   }
 
-  public async unsubscribeMarket(marketHash: string): Promise<IAPIResponse> {
+  public async unsubscribeMarket(
+    marketHash: string
+  ): Promise<IRelayerResponse> {
+    this.debug("unsubscribeMarket");
     if (!isHexString(marketHash)) {
       throw new APISchemaError(`${marketHash} is not a valid hash string.`);
     }
@@ -406,7 +579,7 @@ class SportX extends EventEmitter implements ISportX {
       this.clientSocket.emit(
         RELAYER_SOCKET_MESSAGE_KEYS.UNSUBSCRIBE_MARKET,
         payload,
-        (response: IAPIResponse) => {
+        (response: IRelayerResponse) => {
           if (response.status === "success") {
             resolve(response);
           } else {
@@ -433,10 +606,11 @@ class SportX extends EventEmitter implements ISportX {
     this.subscribedMarketHashes = this.subscribedMarketHashes.filter(
       hash => hash !== marketHash
     );
-    return status as IAPIResponse;
+    return status as IRelayerResponse;
   }
 
   public async subscribeAccount(account: string) {
+    this.debug("subscribeAccount");
     if (!isAddress(account)) {
       throw new APISchemaError(`${account} is not a valid address.`);
     }
@@ -448,7 +622,7 @@ class SportX extends EventEmitter implements ISportX {
       this.clientSocket.emit(
         RELAYER_SOCKET_MESSAGE_KEYS.SUBSCRIBE_ACCOUNT,
         payload,
-        (response: IAPIResponse) => {
+        (response: IRelayerResponse) => {
           if (response.status === "success") {
             resolve(response);
           } else {
@@ -471,10 +645,11 @@ class SportX extends EventEmitter implements ISportX {
       );
     });
     this.subscribedAccounts.push(account);
-    return status as IAPIResponse;
+    return status as IRelayerResponse;
   }
 
   public async unsubscribeAccount(account: string) {
+    this.debug("unsubscribeAccount");
     if (!isAddress(account)) {
       throw new APISchemaError(`${account} is not a valid address`);
     }
@@ -486,7 +661,7 @@ class SportX extends EventEmitter implements ISportX {
       this.clientSocket.emit(
         RELAYER_SOCKET_MESSAGE_KEYS.UNSUBSCRIBE_ACCOUNT,
         payload,
-        (response: IAPIResponse) => {
+        (response: IRelayerResponse) => {
           if (response.status === "success") {
             resolve(response);
           } else {
@@ -513,7 +688,7 @@ class SportX extends EventEmitter implements ISportX {
     this.subscribedAccounts = this.subscribedAccounts.filter(
       acc => acc !== account
     );
-    return status as IAPIResponse;
+    return status as IRelayerResponse;
   }
 }
 

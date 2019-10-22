@@ -52,8 +52,7 @@
     "compile": "tsc",
     "lint": "tslint -c tslint.json src/**/*.ts",
     "test": "rm -rf dist/ && tsc && mocha \"dist/test/*.js\" --timeout 10000 --exit --bail",
-    "listeners-test": "tsc && node dist/test/listeners.js",
-    "format": "tslint --fix -c tslint.json test/**/*.ts scripts/**/*.ts && prettier --write test/**/*.ts src/**/*.ts"
+    "format": "tslint --fix -c tslint.json test/**/*.ts && prettier --write test/**/*.ts src/**/*.ts"
   },
   "lint-staged": {
     "src/**/*.ts": [

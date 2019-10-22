@@ -31,7 +31,7 @@ export const RELAYER_SOCKET_MESSAGE_KEYS = {
   ORDER_BOOK: "order_book",
   PENDING_UNSETTLED_BETS: "pending_unsettled_bets",
   SUBSCRIBE_MARKET: "subscribe_market",
-  UNSUBSCRIBE_MARKET: "unsubscribe_market"
+  UNSUBSCRIBE_MARKET: "unsubscribe_market",
 };
 
 export const RELAYER_HTTP_ENDPOINTS = {

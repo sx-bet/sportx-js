@@ -6,7 +6,8 @@ export {
 } from "./constants";
 export * from "./errors";
 export * from "./sportx";
-export * from "./types/public";
+export * from "./types/relayer";
+export * from "./types/internal";
 export {
   convertToDisplayAmount,
   convertToAPIPercentageOdds,

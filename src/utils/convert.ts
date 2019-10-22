@@ -1,8 +1,16 @@
 import { BigNumber } from "bignumber.js";
-import { BigNumber as EthBigNumber, bigNumberify, formatUnits, parseUnits } from "ethers/utils";
-import { FRACTION_DENOMINATOR, PERCENTAGE_PRECISION_EXPONENT } from "../constants";
-import { IContractOrder, IRelayerNewMakerOrder } from "../types/internal";
-
+import {
+  BigNumber as EthBigNumber,
+  bigNumberify,
+  formatUnits,
+  parseUnits
+} from "ethers/utils";
+import {
+  FRACTION_DENOMINATOR,
+  PERCENTAGE_PRECISION_EXPONENT
+} from "../constants";
+import { IContractOrder } from "../types/internal";
+import { IRelayerMakerOrder } from "../types/relayer";
 
 export function convertToAPIPercentageOdds(decimal: number): EthBigNumber {
   if (decimal < 0 || decimal > 1) {
@@ -27,11 +35,11 @@ export function convertFromAPIPercentageOdds(odds: string): number {
   const impliedOddsWithDecimals = bigNumWithDecimals.dividedBy(
     new BigNumber(10).exponentiatedBy(PERCENTAGE_PRECISION_EXPONENT)
   );
-  return impliedOddsWithDecimals.toNumber()
+  return impliedOddsWithDecimals.toNumber();
 }
 
 export function convertToContractOrder(
-  order: IRelayerNewMakerOrder
+  order: IRelayerMakerOrder
 ): IContractOrder {
   return {
     ...order,
@@ -44,7 +52,7 @@ export function convertToContractOrder(
   };
 }
 export function convertToTrueTokenAmount(amount: number) {
-  return parseUnits(amount.toString(), 18);
+  return parseUnits(amount.toString(), 18).toString();
 }
 
 export function convertToDisplayAmount(amount: string) {
