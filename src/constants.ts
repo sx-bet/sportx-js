@@ -14,32 +14,26 @@ enum Environments {
   PRODUCTION
 }
 
-export const RELAYER_SOCKET_MESSAGE_KEYS = {
-  NEW_ORDER: "new_order",
-  ACTIVE_MARKETS: "active_markets",
-  SUMMARY: "summary",
-  METADATA: "metadata",
-  SUBSCRIBE_GAME: "subscribe_game",
-  UNSUBSCRIBE_GAME: "unsubscribe_game",
-  CANCEL_ORDER: "cancel_order",
-  SUBSCRIBE_ACCOUNT: "subscribe_account",
-  UNSUBSCRIBE_ACCOUNT: "unsubscribe_account",
-  MARKET_ORDER: "market_order",
-  META_FILL_ORDER: "meta_fill_order",
-  MARKET_ORDER_BOOK: "market_order_book",
-  ACTIVE_ORDERS: "active_orders",
-  ORDER_BOOK: "order_book",
-  PENDING_UNSETTLED_BETS: "pending_unsettled_bets",
-  SUBSCRIBE_MARKET: "subscribe_market",
-  UNSUBSCRIBE_MARKET: "unsubscribe_market",
-};
-
 export const RELAYER_HTTP_ENDPOINTS = {
   SPORTS: "/sports",
   LEAGUES: "/leagues",
   ACTIVE_ORDERS: "/active-orders",
   ORDERS: "/orders",
-  PENDING_BETS: "/pending-bets"
+  PENDING_BETS: "/pending-bets",
+  METADATA: "/metadata",
+  ACTIVE_MARKETS: "/markets/active",
+  NEW_ORDER: "/orders/new",
+  SUGGEST_ORDERS: "/orders/suggest",
+  FILL_ORDERS: "/orders/fill",
+  CANCEL_ORDERS: "/orders/cancel"
+};
+
+export const CHANNEL_BASE_KEYS = {
+  ACTIVE_ORDERS: "active_orders",
+  GAME_ORDER_BOOK: "game_order_book",
+  SUMMARY_LEAGUE: "summary_league",
+  SUMMARY_GAME: "summary_game",
+  PENDING_BETS: "pending_bets"
 };
 
 export {

@@ -9,7 +9,8 @@ import { ISportX, newSportX } from "../src/sportx";
 import {
   convertFromAPIPercentageOdds,
   convertToAPIPercentageOdds,
-  convertToTrueTokenAmount
+  convertToTrueTokenAmount,
+  getCompactGameId
 } from "../src/utils/convert";
 
 const TEST_MNEMONIC =
@@ -86,33 +87,37 @@ describe("sportx", () => {
 
   it("should get active orders for an address", async () => {
     const activeMarkets = await sportX.getActiveMarkets();
-    const orders = await sportX.getOrders(activeMarkets[0].marketHash);
+    const orders = await sportX.getOrders([activeMarkets[0].marketHash]);
     const maker = orders[0].maker;
-    const activeOrders = await sportX.getActiveOrders(maker);
+    const activeOrders = await sportX.getOrders(undefined, maker);
     expect(Object.keys(activeOrders).length).greaterThan(0);
   });
 
   it("should get active orders for a market", async () => {
     const activeMarkets = await sportX.getActiveMarkets();
-    const orders = await sportX.getOrders(activeMarkets[0].marketHash);
+    const orders = await sportX.getOrders([activeMarkets[0].marketHash]);
     expect(orders.length).greaterThan(0);
   });
 
   it("should suggest orders", async () => {
     const activeMarkets = await sportX.getActiveMarkets();
     const suggestions = await sportX.suggestOrders(
-      activeMarkets[0].marketHash,
+      activeMarkets[10].marketHash,
       convertToTrueTokenAmount(10),
-      true,
+      false,
       wallet.address
     );
     expect(suggestions.status).to.equal("success");
   });
 
+  it("should get pending bets", async () => {
+    await sportX.getRecentPendingBets(wallet.address);
+  });
+
   it("should fill an order", async () => {
     const activeMarkets = await sportX.getActiveMarkets();
-    const market = activeMarkets[0].marketHash;
-    const orders = await sportX.getOrders(market);
+    const market = activeMarkets[10].marketHash;
+    const orders = await sportX.getOrders([market]);
     const suggestions = await sportX.suggestOrders(
       market,
       convertToTrueTokenAmount(10),
@@ -128,33 +133,23 @@ describe("sportx", () => {
     expect(fill.status).to.equal("success");
   });
 
-  it("should subscribe to a market", async () => {
+  it("should subscribe to a game", async () => {
     const activeMarkets = await sportX.getActiveMarkets();
-    const response = await sportX.subscribeMarket(activeMarkets[0].marketHash);
-    expect(response.status).to.equal("success");
-    await sportX.unsubscribeMarket(activeMarkets[0].marketHash);
+    await sportX.subscribeGameOrderBook(getCompactGameId(activeMarkets[0]));
   });
 
-  it("should unsubscribe from a market", async () => {
+  it("should unsubscribe from a game", async () => {
     const activeMarkets = await sportX.getActiveMarkets();
-    await sportX.subscribeMarket(activeMarkets[0].marketHash);
-    const response = await sportX.unsubscribeMarket(
-      activeMarkets[0].marketHash
-    );
-    expect(response.status).to.equal("success");
+    await sportX.unsubscribeGameOrderBook(getCompactGameId(activeMarkets[0]));
   });
 
   it("should subscribe to an account", async () => {
     const address = await wallet.getAddress();
-    const response = await sportX.subscribeAccount(address);
-    expect(response.status).to.equal("success");
-    await sportX.unsubscribeAccount(address);
+    await sportX.subscribeActiveOrders(address);
   });
 
   it("should unsubscribe from an account", async () => {
     const address = await wallet.getAddress();
-    await sportX.subscribeAccount(address);
-    const response = await sportX.unsubscribeAccount(address);
-    expect(response.status).to.equal("success");
+    await sportX.unsubscribeActiveOrders(address);
   });
 });

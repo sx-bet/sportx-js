@@ -10,7 +10,7 @@ import {
   PERCENTAGE_PRECISION_EXPONENT
 } from "../constants";
 import { IContractOrder } from "../types/internal";
-import { IRelayerMakerOrder } from "../types/relayer";
+import { IMarket, IRelayerMakerOrder } from "../types/relayer";
 
 export function convertToAPIPercentageOdds(decimal: number): EthBigNumber {
   if (decimal < 0 || decimal > 1) {
@@ -57,4 +57,14 @@ export function convertToTrueTokenAmount(amount: number) {
 
 export function convertToDisplayAmount(amount: string) {
   return formatUnits(amount, 18);
+}
+
+export function getCompactGameId(market: IMarket) {
+  return [
+    market.sportId,
+    market.leagueId,
+    market.expiryDate,
+    market.teamOneName,
+    market.teamTwoName
+  ].join(",");
 }

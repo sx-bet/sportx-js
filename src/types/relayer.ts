@@ -1,4 +1,3 @@
-import { RELAYER_SOCKET_MESSAGE_KEYS } from "../constants";
 import { ISignedRelayerMakerOrder } from "./relayer";
 
 export interface IRelayerMakerOrder {
@@ -131,8 +130,3 @@ export interface IMarket {
   homeTeamFirst?: boolean;
   leagueLabel?: string;
 }
-
-export const RelayerEventKeys = {
-  MARKET_ORDER_BOOK: RELAYER_SOCKET_MESSAGE_KEYS.MARKET_ORDER_BOOK,
-  ACTIVE_ORDERS: RELAYER_SOCKET_MESSAGE_KEYS.ACTIVE_ORDERS
-};

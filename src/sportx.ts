@@ -1,3 +1,4 @@
+import ably from "ably";
 import debug from "debug";
 import { utils, Wallet } from "ethers";
 import { Zero } from "ethers/constants";
@@ -9,18 +10,16 @@ import {
 } from "ethers/utils";
 import { EventEmitter } from "events";
 import fetch from "node-fetch";
-import io from "socket.io-client";
-import { isArray, isBoolean } from "util";
+import { isArray, isBoolean, isString } from "util";
 import {
+  CHANNEL_BASE_KEYS,
   Environments,
   PRODUCTION_RELAYER_URL,
   RELAYER_HTTP_ENDPOINTS,
-  RELAYER_SOCKET_MESSAGE_KEYS,
   RELAYER_TIMEOUT,
   RINKEBY_RELAYER_URL
 } from "./constants";
 import { APIError } from "./errors/api_error";
-import { APITimeoutError } from "./errors/api_timeout_error";
 import { APISchemaError } from "./errors/schema_error";
 import {
   IDetailedRelayerMakerOrder,
@@ -29,17 +28,16 @@ import {
   IMetadata,
   INewOrder,
   IPendingBet,
-  IRelayerActiveOrders,
   IRelayerCancelOrderRequest,
   IRelayerMakerOrder,
   IRelayerMarketOrderRequest,
   IRelayerMetaFillOrderRequest,
   IRelayerResponse,
   ISignedRelayerMakerOrder,
-  ISport,
-  RelayerEventKeys
+  ISport
 } from "./types/relayer";
 import { convertToContractOrder } from "./utils/convert";
+import { tryParseJson } from "./utils/misc";
 import {
   getMultiFillHash,
   getOrderHash,
@@ -61,33 +59,38 @@ export interface ISportX extends EventEmitter {
   newOrder(order: INewOrder): Promise<IRelayerResponse>;
   cancelOrder(orderHashes: string[]): Promise<IRelayerResponse>;
   getRecentPendingBets(address: string): Promise<IPendingBet[]>;
-  getOrders(marketHash: string): Promise<IDetailedRelayerMakerOrder[]>;
-  getActiveOrders(account: string): Promise<IDetailedRelayerMakerOrder[]>;
-  subscribeMarket(marketHash: string): Promise<IRelayerResponse>;
+  getOrders(
+    marketHashes?: string[],
+    maker?: string
+  ): Promise<IDetailedRelayerMakerOrder[]>;
   fillOrders(
     orders: IRelayerMakerOrder[],
     takerAmounts: string[]
   ): Promise<IRelayerResponse>;
-  unsubscribeMarket(marketHash: string): Promise<IRelayerResponse>;
-  subscribeAccount(account: string): Promise<IRelayerResponse>;
   suggestOrders(
     marketHash: string,
     betSize: string,
     takerDirectionOutcomeOne: boolean,
     taker: string
   ): Promise<IRelayerResponse>;
-  unsubscribeAccount(account: string): Promise<IRelayerResponse>;
+  subscribeGameOrderBook(compactGameId: string): Promise<void>;
+  unsubscribeGameOrderBook(compactGameId: string): Promise<void>;
+  subscribeActiveOrders(maker: string): Promise<void>;
+  unsubscribeActiveOrders(maker: string): Promise<void>;
+}
+
+interface IChannels {
+  [channelName: string]: ably.Types.RealtimeChannelPromise;
 }
 
 class SportX extends EventEmitter implements ISportX {
   private signingWallet: Wallet;
   private relayerUrl: string;
   private initialized: boolean = false;
-  private clientSocket!: SocketIOClient.Socket;
   private debug = debug("sportx-js");
   private metadata!: IMetadata;
-  private subscribedMarketHashes: string[] = [];
-  private subscribedAccounts: string[] = [];
+  private ably!: ably.Types.RealtimePromise;
+  private ablyChannels!: IChannels;
 
   constructor(env: Environments, privateKey: string) {
     super();
@@ -108,62 +111,44 @@ class SportX extends EventEmitter implements ISportX {
     if (this.initialized) {
       throw new Error("Already initialized");
     }
-    await new Promise((resolve, reject) => {
-      this.clientSocket = io(this.relayerUrl, { transports: ["websocket"] });
-      this.clientSocket.on("connect", () => {
-        resolve();
-        setTimeout(
-          () => reject(new Error("Timeout connecting to the SportX API")),
-          RELAYER_TIMEOUT
-        );
-      });
+    this.ably = new ably.Realtime.Promise({
+      authUrl: `${this.relayerUrl}/user/token`
     });
-    this.initialized = true;
+    await new Promise((resolve, reject) => {
+      this.ably.connection.on("connected", () => {
+        resolve();
+      });
+      setTimeout(() => reject(), RELAYER_TIMEOUT);
+    });
     this.metadata = await this.getMetadata();
-    this.clientSocket.on(
-      RELAYER_SOCKET_MESSAGE_KEYS.MARKET_ORDER_BOOK,
-      (data: IDetailedRelayerMakerOrder[]) => {
-        this.emit(RelayerEventKeys.MARKET_ORDER_BOOK, data);
-      }
-    );
-    this.clientSocket.on(
-      RELAYER_SOCKET_MESSAGE_KEYS.ACTIVE_ORDERS,
-      (data: IRelayerActiveOrders) => {
-        this.emit(RelayerEventKeys.ACTIVE_ORDERS, data);
-      }
-    );
+    this.initialized = true;
+    this.ablyChannels = {};
     this.debug("Initialized");
   }
 
   public async getMetadata(): Promise<IMetadata> {
     this.debug("getMetadata");
-    const metadata = await new Promise((resolve, reject) => {
-      this.clientSocket.on(
-        RELAYER_SOCKET_MESSAGE_KEYS.METADATA,
-        (data: IMetadata) => {
-          this.debug("Got metadata");
-          this.debug(data);
-          resolve(data);
-        }
+    const response = await fetch(
+      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.METADATA}`
+    );
+    const textResponse = await response.text();
+    if (response.status !== 200) {
+      this.debug(response.status);
+      this.debug(response.statusText);
+      throw new APIError(
+        `Can't fetch metadata. Response code: ${
+          response.status
+        }. Result: ${textResponse}`
       );
-      this.clientSocket.emit(
-        RELAYER_SOCKET_MESSAGE_KEYS.METADATA,
-        null,
-        (response: any) => {
-          if (response.status !== "success") {
-            reject(new Error("Error getting metadata from the SportX API"));
-          }
-        }
-      );
-      setTimeout(
-        () =>
-          reject(
-            new APITimeoutError("Timeout getting metadata from the SportX API")
-          ),
-        RELAYER_TIMEOUT
-      );
-    });
-    return metadata as IMetadata;
+    }
+    const { result, valid } = tryParseJson(textResponse);
+    if (!valid) {
+      throw new APIError(`Can't parse JSON ${textResponse}`);
+    }
+    this.debug("Relayer response");
+    this.debug(result);
+    const { data } = result;
+    return data as IMetadata;
   }
 
   public async getLeagues(): Promise<ILeague[]> {
@@ -171,10 +156,23 @@ class SportX extends EventEmitter implements ISportX {
     const response = await fetch(
       `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.LEAGUES}`
     );
-    const jsonResponse = await response.json();
-    this.debug("Relayer response")
-    this.debug(jsonResponse)
-    const { data } = jsonResponse;
+    const textResponse = await response.text();
+    if (response.status !== 200) {
+      this.debug(response.status);
+      this.debug(response.statusText);
+      throw new APIError(
+        `Can't fetch leagues. Response code: ${
+          response.status
+        }. Result: ${textResponse}`
+      );
+    }
+    const { result, valid } = tryParseJson(textResponse);
+    if (!valid) {
+      throw new APIError(`Can't parse JSON ${textResponse}`);
+    }
+    this.debug("Relayer response");
+    this.debug(result);
+    const { data } = result;
     return data as ILeague[];
   }
 
@@ -183,50 +181,49 @@ class SportX extends EventEmitter implements ISportX {
     const response = await fetch(
       `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.SPORTS}`
     );
-    const jsonResponse = await response.json();
+    const textResponse = await response.text();
+    if (response.status !== 200) {
+      this.debug(response.status);
+      this.debug(response.statusText);
+      throw new APIError(
+        `Can't fetch sports. Response code: ${
+          response.status
+        }. Result: ${textResponse}`
+      );
+    }
+    const { result, valid } = tryParseJson(textResponse);
+    if (!valid) {
+      throw new APIError(`Can't parse JSON ${textResponse}`);
+    }
     this.debug("Relayer response");
-    this.debug(jsonResponse);
-    const { data } = jsonResponse;
+    this.debug(result);
+    const { data } = result;
     return data as ISport[];
   }
 
   public async getActiveMarkets(): Promise<IMarket[]> {
     this.debug("getActiveMarkets");
-    const markets = await new Promise((resolve, reject) => {
-      this.clientSocket.on(
-        RELAYER_SOCKET_MESSAGE_KEYS.ACTIVE_MARKETS,
-        (data: IMarket[]) => {
-          this.debug("Got active markets");
-          this.debug(data);
-          resolve(data);
-        }
+    const response = await fetch(
+      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.ACTIVE_MARKETS}`
+    );
+    const textResponse = await response.text();
+    if (response.status !== 200) {
+      this.debug(response.status);
+      this.debug(response.statusText);
+      throw new APIError(
+        `Can't fetch active markets. Response code: ${
+          response.status
+        }. Result: ${textResponse}`
       );
-      this.clientSocket.emit(
-        RELAYER_SOCKET_MESSAGE_KEYS.ACTIVE_MARKETS,
-        null,
-        (response: any) => {
-          this.debug("Active markets response")
-          this.debug(response)
-          if (response.status !== "success") {
-            reject(
-              new Error(
-                `Error getting active markets. Reason: ${response.reason}`
-              )
-            );
-          }
-          setTimeout(
-            () =>
-              reject(
-                new APITimeoutError(
-                  "Timeout getting active markets from the SportX API"
-                )
-              ),
-            RELAYER_TIMEOUT
-          );
-        }
-      );
-    });
-    return markets as IMarket[];
+    }
+    const { result, valid } = tryParseJson(textResponse);
+    if (!valid) {
+      throw new APIError(`Can't parse JSON ${textResponse}`);
+    }
+    this.debug("Relayer response");
+    this.debug(result);
+    const { data } = result;
+    return data as IMarket[];
   }
 
   public async newOrder(order: INewOrder) {
@@ -272,37 +269,33 @@ class SportX extends EventEmitter implements ISportX {
       ...apiMakerOrder,
       signature
     };
-    const status = await new Promise((resolve, reject) => {
-      this.clientSocket.emit(
-        RELAYER_SOCKET_MESSAGE_KEYS.NEW_ORDER,
-        signedApiMakerOrder,
-        (response: IRelayerResponse) => {
-          this.debug("Response from relayer for new order");
-          this.debug(response);
-          if (response.status === "success") {
-            resolve(response);
-          } else {
-            reject(
-              new APIError(
-                `Unable to create new order. Status: ${
-                  response.status
-                }. Reason: ${response.reason}`
-              )
-            );
-          }
-        }
+    this.debug(`New signed order`);
+    this.debug(signedApiMakerOrder);
+    const response = await fetch(
+      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.NEW_ORDER}`,
+      {
+        method: "POST",
+        body: JSON.stringify(signedApiMakerOrder),
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+    const textResponse = await response.text();
+    if (response.status !== 200) {
+      this.debug(response.status);
+      this.debug(response.statusText);
+      throw new APIError(
+        `Can't fetch metadata. Response code: ${
+          response.status
+        }. Result: ${textResponse}`
       );
-      setTimeout(
-        () =>
-          reject(
-            new APITimeoutError(
-              "Timeout getting submitting order to the SportX API"
-            )
-          ),
-        RELAYER_TIMEOUT
-      );
-    });
-    return status as IRelayerResponse;
+    }
+    const { result, valid } = tryParseJson(textResponse);
+    if (!valid) {
+      throw new APIError(`Can't parse JSON ${textResponse}`);
+    }
+    this.debug("Relayer response");
+    this.debug(result);
+    return result as IRelayerResponse;
   }
 
   public async suggestOrders(
@@ -332,37 +325,31 @@ class SportX extends EventEmitter implements ISportX {
     };
     this.debug("Suggest orders payload:");
     this.debug(payload);
-    const status = await new Promise((resolve, reject) => {
-      this.clientSocket.emit(
-        RELAYER_SOCKET_MESSAGE_KEYS.MARKET_ORDER,
-        payload,
-        (response: IRelayerResponse) => {
-          this.debug("Response from relayer for suggest orders");
-          this.debug(response);
-          if (response.status === "success") {
-            resolve(response);
-          } else {
-            reject(
-              new APIError(
-                `Unable to cancel order. Status: ${response.status}. Reason: ${
-                  response.reason
-                }`
-              )
-            );
-          }
-        }
+    const response = await fetch(
+      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.SUGGEST_ORDERS}`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+    const textResponse = await response.text();
+    if (response.status !== 200) {
+      this.debug(response.status);
+      this.debug(response.statusText);
+      throw new APIError(
+        `Can't get suggested orders. Response code: ${
+          response.status
+        }. Result: ${textResponse}`
       );
-      setTimeout(
-        () =>
-          reject(
-            new APITimeoutError(
-              "Timeout getting submitting order to the SportX API"
-            )
-          ),
-        RELAYER_TIMEOUT
-      );
-    });
-    return status as IRelayerResponse;
+    }
+    const { result, valid } = tryParseJson(textResponse);
+    if (!valid) {
+      throw new APIError(`Can't parse JSON ${textResponse}`);
+    }
+    this.debug("Relayer response");
+    this.debug(result);
+    return result as IRelayerResponse;
   }
 
   public async fillOrders(
@@ -407,37 +394,31 @@ class SportX extends EventEmitter implements ISportX {
     };
     this.debug("Meta fill payload");
     this.debug(payload);
-    const status = await new Promise((resolve, reject) => {
-      this.clientSocket.emit(
-        RELAYER_SOCKET_MESSAGE_KEYS.META_FILL_ORDER,
-        payload,
-        (response: IRelayerResponse) => {
-          this.debug("Relayer response");
-          this.debug(response);
-          if (response.status === "success") {
-            resolve(response);
-          } else {
-            reject(
-              new APIError(
-                `Unable to fill order. Status: ${response.status}. Reason: ${
-                  response.reason
-                }`
-              )
-            );
-          }
-        }
+    const response = await fetch(
+      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.FILL_ORDERS}`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+    const textResponse = await response.text();
+    if (response.status !== 200) {
+      this.debug(response.status);
+      this.debug(response.statusText);
+      throw new APIError(
+        `Can't fill orders. Response code: ${
+          response.status
+        }. Result: ${textResponse}`
       );
-      setTimeout(
-        () =>
-          reject(
-            new APITimeoutError(
-              "Timeout getting submitting order to the SportX API"
-            )
-          ),
-        RELAYER_TIMEOUT
-      );
-    });
-    return status as IRelayerResponse;
+    }
+    const { result, valid } = tryParseJson(textResponse);
+    if (!valid) {
+      throw new APIError(`Can't parse JSON ${textResponse}`);
+    }
+    this.debug("Relayer response");
+    this.debug(result);
+    return result as IRelayerResponse;
   }
 
   public async cancelOrder(orderHashes: string[]) {
@@ -461,37 +442,31 @@ class SportX extends EventEmitter implements ISportX {
     };
     this.debug("Cancel order payload");
     this.debug(payload);
-    const status = await new Promise((resolve, reject) => {
-      this.clientSocket.emit(
-        RELAYER_SOCKET_MESSAGE_KEYS.CANCEL_ORDER,
-        payload,
-        (response: IRelayerResponse) => {
-          this.debug("Relayer response");
-          this.debug(response);
-          if (response.status === "success") {
-            resolve(response);
-          } else {
-            reject(
-              new APIError(
-                `Unable to cancel order. Status: ${response.status}. Reason: ${
-                  response.reason
-                }`
-              )
-            );
-          }
-        }
+    const response = await fetch(
+      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.CANCEL_ORDERS}`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+    const textResponse = await response.text();
+    if (response.status !== 200) {
+      this.debug(response.status);
+      this.debug(response.statusText);
+      throw new APIError(
+        `Can't cancel orders. Response code: ${
+          response.status
+        }. Result: ${textResponse}`
       );
-      setTimeout(
-        () =>
-          reject(
-            new APITimeoutError(
-              "Timeout getting submitting order to the SportX API"
-            )
-          ),
-        RELAYER_TIMEOUT
-      );
-    });
-    return status as IRelayerResponse;
+    }
+    const { result, valid } = tryParseJson(textResponse);
+    if (!valid) {
+      throw new APIError(`Can't parse JSON ${textResponse}`);
+    }
+    this.debug("Relayer response");
+    this.debug(result);
+    return result as IRelayerResponse;
   }
 
   public async getRecentPendingBets(address: string): Promise<IPendingBet[]> {
@@ -500,222 +475,138 @@ class SportX extends EventEmitter implements ISportX {
       throw new APISchemaError(`Address ${address} is not a valid address`);
     }
     const response = await fetch(
-      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.PENDING_BETS}/${address}`
+      `${this.relayerUrl}${
+        RELAYER_HTTP_ENDPOINTS.PENDING_BETS
+      }?address=${address}`
     );
-    const { data } = await response.json();
+    const textResponse = await response.text();
+    if (response.status !== 200) {
+      this.debug(response.status);
+      this.debug(response.statusText);
+      throw new APIError(
+        `Can't fetch metadata. Response code: ${
+          response.status
+        }. Result: ${textResponse}`
+      );
+    }
+    const { result, valid } = tryParseJson(textResponse);
+    if (!valid) {
+      throw new APIError(`Can't parse JSON ${textResponse}`);
+    }
+    this.debug("Relayer response");
+    this.debug(result);
+    const { data } = result;
     const pendingBets: IPendingBet[] = data;
     return pendingBets;
   }
 
   public async getOrders(
-    marketHash: string
+    marketHashes?: string[],
+    maker?: string
   ): Promise<IDetailedRelayerMakerOrder[]> {
     this.debug("getOrders");
-    if (!isHexString(marketHash)) {
+    if (marketHashes && !marketHashes.every(hash => isHexString(hash))) {
       throw new APISchemaError(
-        `Market hash ${marketHash} is not a valid hash string.`
+        `One of the supplied market hashes is not a valid hex string.`
       );
     }
+    if (maker && !isAddress(maker)) {
+      throw new APISchemaError(
+        `One of the supplied maker addresses is not a valid address.`
+      );
+    }
+    const payload = {
+      ...(marketHashes && { marketHashes }),
+      ...(maker && { maker })
+    };
     const response = await fetch(
-      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.ORDERS}/${marketHash}`
+      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.ORDERS}`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
     );
-    const { data } = await response.json();
+    const textResponse = await response.text();
+    if (response.status !== 200) {
+      this.debug(response.status);
+      this.debug(response.statusText);
+      throw new APIError(
+        `Can't get orders. Response code: ${
+          response.status
+        }. Result: ${textResponse}`
+      );
+    }
+    const { result, valid } = tryParseJson(textResponse);
+    if (!valid) {
+      throw new APIError(`Can't parse JSON ${textResponse}`);
+    }
+    this.debug("Relayer response");
+    this.debug(result);
+    const { data } = result;
     const orders: IDetailedRelayerMakerOrder[] = data;
     return orders;
   }
 
-  public async getActiveOrders(
-    account: string
-  ): Promise<IDetailedRelayerMakerOrder[]> {
-    this.debug("getActiveOrders");
-    if (!isAddress(account)) {
-      throw new APISchemaError(`Address ${account} is not a valid address`);
+  public async subscribeGameOrderBook(compactGameId: string) {
+    if (typeof compactGameId !== "string") {
+      throw new APISchemaError(`${compactGameId} is not a valid game ID`)
     }
-    const response = await fetch(
-      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.ACTIVE_ORDERS}/${account}`
+    await this.subscribeAblyChannel(
+      CHANNEL_BASE_KEYS.GAME_ORDER_BOOK,
+      compactGameId
     );
-    const jsonResponse = await response.json();
-    this.debug("Active orders response");
-    this.debug(jsonResponse);
-    const { data } = jsonResponse;
-    const orders: IDetailedRelayerMakerOrder[] = data;
-    return orders;
   }
 
-  public async subscribeMarket(marketHash: string): Promise<IRelayerResponse> {
-    this.debug("subscribeMarket");
-    if (!isHexString(marketHash)) {
-      throw new APISchemaError(`${marketHash} is not a valid hash string.`);
+  public async unsubscribeGameOrderBook(compactGameId: string) {
+    if (typeof compactGameId !== "string") {
+      throw new APISchemaError(`${compactGameId} is not a valid game ID`)
     }
-    if (this.subscribedMarketHashes.includes(marketHash)) {
-      throw new Error(`${marketHash} is already subscribed.`);
-    }
-    const payload = { marketHash };
-    const status = await new Promise((resolve, reject) => {
-      this.clientSocket.emit(
-        RELAYER_SOCKET_MESSAGE_KEYS.SUBSCRIBE_MARKET,
-        payload,
-        (response: IRelayerResponse) => {
-          this.debug("Subscribe market response");
-          this.debug(response);
-          if (response.status === "success") {
-            resolve(response);
-          } else {
-            reject(
-              new APIError(
-                `Unable to subscribe to market ${marketHash}. Status: ${
-                  response.status
-                }. Reason: ${response.reason}`
-              )
-            );
-          }
-          setTimeout(
-            () =>
-              reject(
-                new APITimeoutError(
-                  `Timeout subscribing to market ${marketHash}`
-                )
-              ),
-            RELAYER_TIMEOUT
-          );
-        }
-      );
-    });
-    this.subscribedMarketHashes.push(marketHash);
-    return status as IRelayerResponse;
-  }
-
-  public async unsubscribeMarket(
-    marketHash: string
-  ): Promise<IRelayerResponse> {
-    this.debug("unsubscribeMarket");
-    if (!isHexString(marketHash)) {
-      throw new APISchemaError(`${marketHash} is not a valid hash string.`);
-    }
-    if (!this.subscribedMarketHashes.includes(marketHash)) {
-      throw new Error(`${marketHash} is not subscribed.`);
-    }
-    const payload = { marketHash };
-    const status = await new Promise((resolve, reject) => {
-      this.clientSocket.emit(
-        RELAYER_SOCKET_MESSAGE_KEYS.UNSUBSCRIBE_MARKET,
-        payload,
-        (response: IRelayerResponse) => {
-          this.debug("Unsubscribe market response");
-          this.debug(response);
-          if (response.status === "success") {
-            resolve(response);
-          } else {
-            reject(
-              new APIError(
-                `Unable to unsubscribe to market. Status: ${
-                  response.status
-                }. Reason: ${response.reason}`
-              )
-            );
-          }
-          setTimeout(
-            () =>
-              reject(
-                new APITimeoutError(
-                  `Timeout unsubscribing to market ${marketHash}`
-                )
-              ),
-            RELAYER_TIMEOUT
-          );
-        }
-      );
-    });
-    this.subscribedMarketHashes = this.subscribedMarketHashes.filter(
-      hash => hash !== marketHash
+    await this.unsubscribeAblyChannel(
+      CHANNEL_BASE_KEYS.GAME_ORDER_BOOK,
+      compactGameId
     );
-    return status as IRelayerResponse;
   }
 
-  public async subscribeAccount(account: string) {
-    this.debug("subscribeAccount");
-    if (!isAddress(account)) {
-      throw new APISchemaError(`${account} is not a valid address.`);
+  public async subscribeActiveOrders(maker: string) {
+    if (!isAddress(maker)) {
+      throw new APISchemaError(`${maker} is not a valid address`)
     }
-    if (this.subscribedAccounts.includes(account)) {
-      throw new Error(`${account} is already subscribed.`);
-    }
-    const payload = { address: account };
-    const status = await new Promise((resolve, reject) => {
-      this.clientSocket.emit(
-        RELAYER_SOCKET_MESSAGE_KEYS.SUBSCRIBE_ACCOUNT,
-        payload,
-        (response: IRelayerResponse) => {
-          this.debug("Subscribe account response");
-          this.debug(response);
-          if (response.status === "success") {
-            resolve(response);
-          } else {
-            reject(
-              new APIError(
-                `Unable to subscribe to account ${account}. Status: ${
-                  response.status
-                }. Reason: ${response.reason}`
-              )
-            );
-          }
-          setTimeout(
-            () =>
-              reject(
-                new APITimeoutError(`Timeout subscribing to account ${account}`)
-              ),
-            RELAYER_TIMEOUT
-          );
-        }
-      );
-    });
-    this.subscribedAccounts.push(account);
-    return status as IRelayerResponse;
+    await this.subscribeAblyChannel(CHANNEL_BASE_KEYS.ACTIVE_ORDERS, maker);
   }
 
-  public async unsubscribeAccount(account: string) {
-    this.debug("unsubscribeAccount");
-    if (!isAddress(account)) {
-      throw new APISchemaError(`${account} is not a valid address`);
+  public async unsubscribeActiveOrders(maker: string) {
+    if (!isAddress(maker)) {
+      throw new APISchemaError(`${maker} is not a valid address`)
     }
-    if (!this.subscribedAccounts.includes(account)) {
-      throw new Error(`${account} is not subscribed.`);
+    await this.unsubscribeAblyChannel(CHANNEL_BASE_KEYS.ACTIVE_ORDERS, maker);
+  }
+
+  private async subscribeAblyChannel(baseChannel: string, subChannel: string) {
+    const channelName = `${baseChannel}:${subChannel}`;
+    if (this.ablyChannels[channelName]) {
+      throw new APIError(`Already subscribed to ${channelName}`);
     }
-    const payload = { address: account };
-    const status = await new Promise((resolve, reject) => {
-      this.clientSocket.emit(
-        RELAYER_SOCKET_MESSAGE_KEYS.UNSUBSCRIBE_ACCOUNT,
-        payload,
-        (response: IRelayerResponse) => {
-          this.debug("Unsubscribe account response");
-          this.debug(response);
-          if (response.status === "success") {
-            resolve(response);
-          } else {
-            reject(
-              new APIError(
-                `Unable to unsubscribe to account ${account}. Status: ${
-                  response.status
-                }. Reason: ${response.reason}`
-              )
-            );
-          }
-          setTimeout(
-            () =>
-              reject(
-                new APITimeoutError(
-                  `Timeout unsubscribing to account ${account}`
-                )
-              ),
-            RELAYER_TIMEOUT
-          );
-        }
-      );
+    const channel = this.ably.channels.get(channelName);
+    await channel.subscribe(message => {
+      this.emit(message.name, message.data);
     });
-    this.subscribedAccounts = this.subscribedAccounts.filter(
-      acc => acc !== account
-    );
-    return status as IRelayerResponse;
+    this.ablyChannels[channelName] = channel;
+  }
+
+  private async unsubscribeAblyChannel(
+    baseChannel: string,
+    subChannel: string
+  ) {
+    const channelName = `${baseChannel}:${subChannel}`;
+    const channel = this.ablyChannels[channelName];
+    if (!channel) {
+      throw new APIError(`Not subscribed to ${channelName}`)
+    }
+    await channel.detach();
+    delete this.ablyChannels[channelName];
   }
 }
 
