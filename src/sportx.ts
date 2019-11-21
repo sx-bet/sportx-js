@@ -1,4 +1,5 @@
 import ably from "ably";
+import fetch from "cross-fetch";
 import debug from "debug";
 import { utils, Wallet } from "ethers";
 import { Zero } from "ethers/constants";
@@ -9,8 +10,7 @@ import {
   randomBytes
 } from "ethers/utils";
 import { EventEmitter } from "events";
-import fetch from "node-fetch";
-import { isArray, isBoolean, isString } from "util";
+import { isArray, isBoolean } from "util";
 import {
   CHANNEL_BASE_KEYS,
   Environments,
@@ -552,7 +552,7 @@ class SportX extends EventEmitter implements ISportX {
 
   public async subscribeGameOrderBook(compactGameId: string) {
     if (typeof compactGameId !== "string") {
-      throw new APISchemaError(`${compactGameId} is not a valid game ID`)
+      throw new APISchemaError(`${compactGameId} is not a valid game ID`);
     }
     await this.subscribeAblyChannel(
       CHANNEL_BASE_KEYS.GAME_ORDER_BOOK,
@@ -562,7 +562,7 @@ class SportX extends EventEmitter implements ISportX {
 
   public async unsubscribeGameOrderBook(compactGameId: string) {
     if (typeof compactGameId !== "string") {
-      throw new APISchemaError(`${compactGameId} is not a valid game ID`)
+      throw new APISchemaError(`${compactGameId} is not a valid game ID`);
     }
     await this.unsubscribeAblyChannel(
       CHANNEL_BASE_KEYS.GAME_ORDER_BOOK,
@@ -572,14 +572,14 @@ class SportX extends EventEmitter implements ISportX {
 
   public async subscribeActiveOrders(maker: string) {
     if (!isAddress(maker)) {
-      throw new APISchemaError(`${maker} is not a valid address`)
+      throw new APISchemaError(`${maker} is not a valid address`);
     }
     await this.subscribeAblyChannel(CHANNEL_BASE_KEYS.ACTIVE_ORDERS, maker);
   }
 
   public async unsubscribeActiveOrders(maker: string) {
     if (!isAddress(maker)) {
-      throw new APISchemaError(`${maker} is not a valid address`)
+      throw new APISchemaError(`${maker} is not a valid address`);
     }
     await this.unsubscribeAblyChannel(CHANNEL_BASE_KEYS.ACTIVE_ORDERS, maker);
   }
@@ -603,7 +603,7 @@ class SportX extends EventEmitter implements ISportX {
     const channelName = `${baseChannel}:${subChannel}`;
     const channel = this.ablyChannels[channelName];
     if (!channel) {
-      throw new APIError(`Not subscribed to ${channelName}`)
+      throw new APIError(`Not subscribed to ${channelName}`);
     }
     await channel.detach();
     delete this.ablyChannels[channelName];
