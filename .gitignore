@@ -68,4 +68,6 @@ build
 *.map
 test/**/.js
 src/**/*.js
-dist/*
+dist-cjs
+dist-esm
+dist
