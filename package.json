@@ -47,7 +47,8 @@
   "module": "dist-esm/index.js",
   "source": "src/index.ts",
   "files": [
-    "/dist"
+    "/dist-esm",
+    "/dist-cjs"
   ],
   "scripts": {
     "dist-esm": "rm -rf dist-esm/ && tsc -p tsconfig.esm.dist.json",
