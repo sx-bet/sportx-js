@@ -12,7 +12,7 @@ or
 
 `npm i @sportx-bet/sportx-js`
 
-This library is written in TypeScript and compiled down to ES6.
+This library is compiled down to es6 and works in node and the browser.
 
 ## Usage
 
@@ -31,7 +31,9 @@ You can do the following things with this API:
 11. Subscribe to a game and get updates when any of the underlying markets (spread, money line, over under) change
 12. Subscribe to an address and get updates when that addresses' bookmaker orders change
 
-In any case, to get started, you'll need your private key and the environment you want to use. We recommend starting on rinkeby first. Example:
+In any case, to get started, you can either initialize via your ethereum private key or initialize via an existing web3 instance. *Ensure that the backing provider for the web3 instance matches the network.*
+
+### Initializing via ethereum private key
 
 ```typescript
 import { Environments, newSportX } from "@sportx-bet/sportx-js";
@@ -47,6 +49,21 @@ async function main() {
 Note that you do not need a SportX API key to get started - this is just your Ethereum private key.
 
 `newSportX` returns a promise that resolves to an initialized SportX API object.
+
+### Initializing via an existing web3 instance.
+
+```typescript
+import { Environments, newSportX } from "@sportx-bet/sportx-js";
+import { providers } from 'ethers';
+
+async function main() {
+  const sportX = await newSportX(
+    Environments.RINKEBY,
+    undefined,
+    new providers.Web3Provider(web3.currentProvider)
+  )
+}
+```
 
 The following assume you have an initialized sportX API object.
 

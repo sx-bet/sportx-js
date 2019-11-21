@@ -1,7 +1,7 @@
 import * as ably from "ably";
 import fetch from "cross-fetch";
 import debug from "debug";
-import { utils, Wallet } from "ethers";
+import { providers, Signer, utils, Wallet } from "ethers";
 import { Zero } from "ethers/constants";
 import {
   bigNumberify,
@@ -84,7 +84,7 @@ interface IChannels {
 }
 
 class SportX extends EventEmitter implements ISportX {
-  private signingWallet: Wallet;
+  private signingWallet: Signer;
   private relayerUrl: string;
   private initialized: boolean = false;
   private debug = debug("sportx-js");
@@ -92,12 +92,21 @@ class SportX extends EventEmitter implements ISportX {
   private ably!: ably.Types.RealtimePromise;
   private ablyChannels!: IChannels;
 
-  constructor(env: Environments, privateKey: string) {
+  constructor(
+    env: Environments,
+    privateKey?: string,
+    provider?: providers.Web3Provider
+  ) {
     super();
-    if (!isHexString(privateKey)) {
+    if (privateKey && !isHexString(privateKey)) {
       throw new Error(`${privateKey} is not a valid private key.`);
+    } else if (privateKey) {
+      this.signingWallet = new Wallet(privateKey);
+    } else if (provider) {
+      this.signingWallet = provider.getSigner(0);
+    } else {
+      throw new Error(`Neither privateKey nor provider provided.`);
     }
-    this.signingWallet = new Wallet(privateKey);
     if (env === Environments.PRODUCTION) {
       this.relayerUrl = PRODUCTION_RELAYER_URL;
     } else if (env === Environments.RINKEBY) {
@@ -247,7 +256,7 @@ class SportX extends EventEmitter implements ISportX {
     const salt = bigNumberify(randomBytes(32)).toString();
     const apiMakerOrder: IRelayerMakerOrder = {
       marketHash: order.marketHash,
-      maker: this.signingWallet.address,
+      maker: await this.signingWallet.getAddress(),
       totalBetSize: bigNumBetSize.toString(),
       percentageOdds: order.percentageOdds,
       expiry: order.expiry.toString(),
@@ -387,7 +396,7 @@ class SportX extends EventEmitter implements ISportX {
     const payload: IRelayerMetaFillOrderRequest = {
       orderHashes,
       takerAmounts,
-      taker: this.signingWallet.address,
+      taker: await this.signingWallet.getAddress(),
       takerSig: takerSignature,
       fillSalt: fillSalt.toString(),
       submitterFee: submitterFee.toString()
@@ -610,8 +619,12 @@ class SportX extends EventEmitter implements ISportX {
   }
 }
 
-export async function newSportX(env: Environments, privateKey: string) {
-  const sportX = new SportX(env, privateKey);
+export async function newSportX(
+  env: Environments,
+  privateKey?: string,
+  provider?: providers.Web3Provider
+) {
+  const sportX = new SportX(env, privateKey, provider);
   await sportX.init();
   return sportX;
 }

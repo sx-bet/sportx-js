@@ -1,4 +1,4 @@
-import { Wallet } from "ethers";
+import { Signer } from "ethers";
 import { arrayify, BigNumber, solidityKeccak256 } from "ethers/utils";
 import { IContractOrder } from "../types/internal";
 import { IRelayerMakerOrder } from "../types/relayer";
@@ -6,7 +6,7 @@ import { convertToContractOrder } from "./convert";
 
 export async function getOrderSignature(
   order: IRelayerMakerOrder,
-  wallet: Wallet
+  wallet: Signer
 ) {
   const contractOrder = convertToContractOrder(order);
   return getContractOrderSignature(contractOrder, wallet);
@@ -45,7 +45,7 @@ export function getOrderHash(order: IContractOrder) {
 
 async function getContractOrderSignature(
   order: IContractOrder,
-  signer: Wallet
+  signer: Signer
 ) {
   const hash = arrayify(getOrderHash(order));
   return signer.signMessage(hash);
