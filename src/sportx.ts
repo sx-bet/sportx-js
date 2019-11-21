@@ -1,4 +1,4 @@
-import ably from "ably";
+import * as ably from "ably";
 import fetch from "cross-fetch";
 import debug from "debug";
 import { utils, Wallet } from "ethers";
