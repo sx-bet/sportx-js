@@ -14,6 +14,11 @@ enum Environments {
   PRODUCTION
 }
 
+export enum Tokens {
+  WETH = "WETH",
+  DAI = "DAI"
+}
+
 export const RELAYER_HTTP_ENDPOINTS = {
   SPORTS: "/sports",
   LEAGUES: "/leagues",

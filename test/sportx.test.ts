@@ -4,7 +4,7 @@ import { parseUnits } from "ethers/utils";
 import "mocha";
 import moment from "moment";
 import { INewOrder } from "../src";
-import { Environments } from "../src/constants";
+import { Environments, Tokens } from "../src/constants";
 import { ISportX, newSportX } from "../src/sportx";
 import {
   convertFromAPIPercentageOdds,
@@ -40,12 +40,12 @@ describe("sportx", () => {
   });
 
   it("should get active markets", async () => {
-    const activeMarkets = await sportX.getActiveMarkets();
+    const activeMarkets = await sportX.getActiveMarkets(Tokens.DAI);
     expect(activeMarkets.length).greaterThan(0);
   });
 
   it("should make a new order", async () => {
-    const activeMarkets = await sportX.getActiveMarkets();
+    const activeMarkets = await sportX.getActiveMarkets(Tokens.DAI);
     const firstMarketHash = activeMarkets[0].marketHash;
     const newOrder: INewOrder = {
       marketHash: firstMarketHash,
@@ -61,7 +61,7 @@ describe("sportx", () => {
   });
 
   it("should cancel an order", async () => {
-    const activeMarkets = await sportX.getActiveMarkets();
+    const activeMarkets = await sportX.getActiveMarkets(Tokens.DAI);
     const firstMarketHash = activeMarkets[0].marketHash;
     const newOrder: INewOrder = {
       marketHash: firstMarketHash,
@@ -73,9 +73,9 @@ describe("sportx", () => {
       isMakerBettingOutcomeOne: true
     };
     const {
-      data: { orderHash }
+      data: { orderHashes }
     } = await sportX.newOrder(newOrder);
-    const response = await sportX.cancelOrder([orderHash]);
+    const response = await sportX.cancelOrder(orderHashes);
     expect(response.status).to.equal("success");
   });
 
@@ -86,7 +86,7 @@ describe("sportx", () => {
   });
 
   it("should get active orders for an address", async () => {
-    const activeMarkets = await sportX.getActiveMarkets();
+    const activeMarkets = await sportX.getActiveMarkets(Tokens.DAI);
     const orders = await sportX.getOrders([activeMarkets[0].marketHash]);
     const maker = orders[0].maker;
     const activeOrders = await sportX.getOrders(undefined, maker);
@@ -94,13 +94,13 @@ describe("sportx", () => {
   });
 
   it("should get active orders for a market", async () => {
-    const activeMarkets = await sportX.getActiveMarkets();
+    const activeMarkets = await sportX.getActiveMarkets(Tokens.DAI);
     const orders = await sportX.getOrders([activeMarkets[0].marketHash]);
     expect(orders.length).greaterThan(0);
   });
 
   it("should suggest orders", async () => {
-    const activeMarkets = await sportX.getActiveMarkets();
+    const activeMarkets = await sportX.getActiveMarkets(Tokens.DAI);
     const suggestions = await sportX.suggestOrders(
       activeMarkets[10].marketHash,
       convertToTrueTokenAmount(10),
@@ -111,11 +111,11 @@ describe("sportx", () => {
   });
 
   it("should get pending bets", async () => {
-    await sportX.getRecentPendingBets(wallet.address);
+    await sportX.getRecentPendingBets(wallet.address, Tokens.DAI);
   });
 
   it("should fill an order", async () => {
-    const activeMarkets = await sportX.getActiveMarkets();
+    const activeMarkets = await sportX.getActiveMarkets(Tokens.DAI);
     const market = activeMarkets[10].marketHash;
     const orders = await sportX.getOrders([market]);
     const suggestions = await sportX.suggestOrders(
@@ -134,12 +134,12 @@ describe("sportx", () => {
   });
 
   it("should subscribe to a game", async () => {
-    const activeMarkets = await sportX.getActiveMarkets();
+    const activeMarkets = await sportX.getActiveMarkets(Tokens.DAI);
     await sportX.subscribeGameOrderBook(getCompactGameId(activeMarkets[0]));
   });
 
   it("should unsubscribe from a game", async () => {
-    const activeMarkets = await sportX.getActiveMarkets();
+    const activeMarkets = await sportX.getActiveMarkets(Tokens.DAI);
     await sportX.unsubscribeGameOrderBook(getCompactGameId(activeMarkets[0]));
   });
 

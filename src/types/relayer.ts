@@ -63,9 +63,16 @@ export interface IMetadata {
   };
   oracleFees: {
     DAI: string;
+    WETH: string;
   };
-  makerOrderMinimum: string;
-  takerMinimum: string;
+  makerOrderMinimums: {
+    DAI: string;
+    WETH: string;
+  };
+  takerMinimums: {
+    DAI: string;
+    WETH: string;
+  };
 }
 
 export interface ILeague {

@@ -3,12 +3,7 @@ import fetch from "cross-fetch";
 import debug from "debug";
 import { providers, Signer, utils, Wallet } from "ethers";
 import { Zero } from "ethers/constants";
-import {
-  bigNumberify,
-  formatUnits,
-  isHexString,
-  randomBytes
-} from "ethers/utils";
+import { bigNumberify, isHexString, randomBytes } from "ethers/utils";
 import { EventEmitter } from "events";
 import { isArray, isBoolean } from "util";
 import {
@@ -17,7 +12,8 @@ import {
   PRODUCTION_RELAYER_URL,
   RELAYER_HTTP_ENDPOINTS,
   RELAYER_TIMEOUT,
-  RINKEBY_RELAYER_URL
+  RINKEBY_RELAYER_URL,
+  Tokens
 } from "./constants";
 import { APIError } from "./errors/api_error";
 import { APISchemaError } from "./errors/schema_error";
@@ -55,10 +51,10 @@ export interface ISportX extends EventEmitter {
   getMetadata(): Promise<IMetadata>;
   getLeagues(): Promise<ILeague[]>;
   getSports(): Promise<ISport[]>;
-  getActiveMarkets(): Promise<IMarket[]>;
+  getActiveMarkets(token: Tokens): Promise<IMarket[]>;
   newOrder(order: INewOrder): Promise<IRelayerResponse>;
   cancelOrder(orderHashes: string[]): Promise<IRelayerResponse>;
-  getRecentPendingBets(address: string): Promise<IPendingBet[]>;
+  getRecentPendingBets(address: string, token: Tokens): Promise<IPendingBet[]>;
   getOrders(
     marketHashes?: string[],
     maker?: string
@@ -210,10 +206,12 @@ class SportX extends EventEmitter implements ISportX {
     return data as ISport[];
   }
 
-  public async getActiveMarkets(): Promise<IMarket[]> {
+  public async getActiveMarkets(token: Tokens): Promise<IMarket[]> {
     this.debug("getActiveMarkets");
     const response = await fetch(
-      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.ACTIVE_MARKETS}`
+      `${this.relayerUrl}${
+        RELAYER_HTTP_ENDPOINTS.ACTIVE_MARKETS
+      }?baseToken=${token}`
     );
     const textResponse = await response.text();
     if (response.status !== 200) {
@@ -242,17 +240,6 @@ class SportX extends EventEmitter implements ISportX {
       throw new APISchemaError(schemaValidation);
     }
     const bigNumBetSize = bigNumberify(order.totalBetSize);
-    const makerOrderMinimumBigNum = bigNumberify(
-      this.metadata.makerOrderMinimum
-    );
-    if (bigNumBetSize.lt(makerOrderMinimumBigNum)) {
-      throw new APISchemaError(
-        `totalBetSize below API minimum of ${formatUnits(
-          makerOrderMinimumBigNum,
-          18
-        )}`
-      );
-    }
     const salt = bigNumberify(randomBytes(32)).toString();
     const apiMakerOrder: IRelayerMakerOrder = {
       marketHash: order.marketHash,
@@ -284,7 +271,7 @@ class SportX extends EventEmitter implements ISportX {
       `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.NEW_ORDER}`,
       {
         method: "POST",
-        body: JSON.stringify(signedApiMakerOrder),
+        body: JSON.stringify([signedApiMakerOrder]),
         headers: { "Content-Type": "application/json" }
       }
     );
@@ -478,7 +465,10 @@ class SportX extends EventEmitter implements ISportX {
     return result as IRelayerResponse;
   }
 
-  public async getRecentPendingBets(address: string): Promise<IPendingBet[]> {
+  public async getRecentPendingBets(
+    address: string,
+    token: Tokens
+  ): Promise<IPendingBet[]> {
     this.debug("getRecentPendingBets");
     if (!isAddress(address)) {
       throw new APISchemaError(`Address ${address} is not a valid address`);
@@ -486,7 +476,7 @@ class SportX extends EventEmitter implements ISportX {
     const response = await fetch(
       `${this.relayerUrl}${
         RELAYER_HTTP_ENDPOINTS.PENDING_BETS
-      }?address=${address}`
+      }?address=${address}&baseToken=${token}`
     );
     const textResponse = await response.text();
     if (response.status !== 200) {
