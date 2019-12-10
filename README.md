@@ -31,6 +31,8 @@ You can do the following things with this API:
 11. Subscribe to a game and get updates when any of the underlying markets (spread, money line, over under) change
 12. Subscribe to an address and get updates when that addresses' bookmaker orders change
 
+We support betting in DAI or WETH.
+
 In any case, to get started, you can either initialize via your ethereum private key or initialize via an existing web3 instance. *Ensure that the backing provider for the web3 instance matches the network.*
 
 ### Initializing via ethereum private key
@@ -70,8 +72,10 @@ The following assume you have an initialized sportX API object.
 ### Get all the active markets
 
 ```typescript
-const activeMarkets = await sportX.getActiveMarkets();
-console.log(activeMarkets);
+const activeMarketsDai = await sportX.getActiveMarkets("DAI");
+console.log(activeMarketsDai);
+const activeMarketsWeth = await sportX.getActiveMarkets("WETH");
+console.log(activeMarketsWeth);
 ```
 
 Which produces an **array** of objects with the following schema:
