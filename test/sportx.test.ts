@@ -114,6 +114,10 @@ describe("sportx", () => {
     await sportX.getRecentPendingBets(wallet.address, Tokens.DAI);
   });
 
+  it("should get trades", async () => {
+    await sportX.getTrades();
+  });
+
   it("should fill an order", async () => {
     const activeMarkets = await sportX.getActiveMarkets(Tokens.DAI);
     const market = activeMarkets[10].marketHash;

@@ -30,7 +30,8 @@ export const RELAYER_HTTP_ENDPOINTS = {
   NEW_ORDER: "/orders/new",
   SUGGEST_ORDERS: "/orders/suggest",
   FILL_ORDERS: "/orders/fill",
-  CANCEL_ORDERS: "/orders/cancel"
+  CANCEL_ORDERS: "/orders/cancel",
+  TRADES: "/trades"
 };
 
 export const CHANNEL_BASE_KEYS = {

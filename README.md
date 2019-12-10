@@ -30,6 +30,7 @@ You can do the following things with this API:
 10. Get pending bets for a user
 11. Subscribe to a game and get updates when any of the underlying markets (spread, money line, over under) change
 12. Subscribe to an address and get updates when that addresses' bookmaker orders change
+13. Get past trades (graded/settled and ungraded/unsettled)
 
 We support betting in DAI or WETH.
 
@@ -743,6 +744,55 @@ await sportX.unsubscribeActiveOrders(
 ```
 
 If it failed, it will throw an `APISchemaError` or `APIError` depending on the type of error (former would be validation and latter would be an error from the API).
+
+### Get past trades (graded/settled and ungraded/unsettled)
+You can get past trades for your account (regardless if you were the maker or taker in the trade), as well as query for trades that are still pending or unsettled using `getTrades(startDate, endDate, settled)`
+
+Example (getting unsettled trades):
+
+```typescript
+const unsettledTrades = await sportX.getTrades(
+  1575912953,
+  1576008230,
+  false
+);
+console.log(unsettledTrades);
+```
+
+`startDate` is in unix seconds. If present, all trades will be after this time
+`endDate` is in unix seconds. If present, all trades will be before this time.
+`settled` is true or false. You can search for only unsettled trades or settled trades using this.
+
+Which produces unsettled trades like so:
+
+```json
+[
+   {
+      "maker": "0xE5F5cC7496b2B39F0a76442Bc8De0E7FEedc7e55",
+      "taker": "0xe087299AE9Acd0133d6D1544A97Bb0EEe24a2671",
+      "takerAmount": "50000000000000000000",
+      "takerEscrow": "17882942028012272361",
+      "orderHash": "0x2bd0af47abb9631c13e7e25d296dde828245d7cd1e515e47a96e3bb9e753e8f9",
+      "percentageOdds": "73656206561240705812",
+      "marketHash": "0x79dc0ebbfd89de79f5ee0f1e495480fbea3efb341e3087b2852915c0d5c0d450",
+      "isMakerBettingOutcomeOne": false,
+      "betTime": 1576008231,
+      "settled": false
+   },
+   {
+      "maker": "0xaD90d89b23Fc80bCF70c3E8CC23a21ccADFBC95F",
+      "taker": "0xe087299AE9Acd0133d6D1544A97Bb0EEe24a2671",
+      "takerAmount": "5868866863720475764",
+      "takerEscrow": "2117057971987727638",
+      "orderHash": "0xda6d82e07179328cc3803122c856bbe1bba8b0b8f5fc920c5aea848cf33f26c7",
+      "percentageOdds": "73490134010258514214",
+      "marketHash": "0x79dc0ebbfd89de79f5ee0f1e495480fbea3efb341e3087b2852915c0d5c0d450",
+      "isMakerBettingOutcomeOne": false,
+      "betTime": 1576008231,
+      "settled": false
+   }
+]
+```
 
 ## Debugging
 

@@ -5,7 +5,8 @@ import { providers, Signer, utils, Wallet } from "ethers";
 import { Zero } from "ethers/constants";
 import { bigNumberify, isHexString, randomBytes } from "ethers/utils";
 import { EventEmitter } from "events";
-import { isArray, isBoolean } from "util";
+import queryString from "query-string";
+import { isArray, isBoolean, isNumber, isUndefined } from "util";
 import {
   CHANNEL_BASE_KEYS,
   Environments,
@@ -30,7 +31,8 @@ import {
   IRelayerMetaFillOrderRequest,
   IRelayerResponse,
   ISignedRelayerMakerOrder,
-  ISport
+  ISport,
+  ITrade
 } from "./types/relayer";
 import { convertToContractOrder } from "./utils/convert";
 import { tryParseJson } from "./utils/misc";
@@ -69,6 +71,11 @@ export interface ISportX extends EventEmitter {
     takerDirectionOutcomeOne: boolean,
     taker: string
   ): Promise<IRelayerResponse>;
+  getTrades(
+    startDate?: number,
+    endDate?: number,
+    settled?: boolean
+  ): Promise<ITrade[]>;
   subscribeGameOrderBook(compactGameId: string): Promise<void>;
   unsubscribeGameOrderBook(compactGameId: string): Promise<void>;
   subscribeActiveOrders(maker: string): Promise<void>;
@@ -208,10 +215,12 @@ class SportX extends EventEmitter implements ISportX {
 
   public async getActiveMarkets(token: Tokens): Promise<IMarket[]> {
     this.debug("getActiveMarkets");
+    const payload = {
+      baseToken: token
+    };
+    const qsPayload = queryString.stringify(payload);
     const response = await fetch(
-      `${this.relayerUrl}${
-        RELAYER_HTTP_ENDPOINTS.ACTIVE_MARKETS
-      }?baseToken=${token}`
+      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.ACTIVE_MARKETS}?${qsPayload}`
     );
     const textResponse = await response.text();
     if (response.status !== 200) {
@@ -473,10 +482,13 @@ class SportX extends EventEmitter implements ISportX {
     if (!isAddress(address)) {
       throw new APISchemaError(`Address ${address} is not a valid address`);
     }
+    const payload = {
+      address,
+      baseToken: token
+    };
+    const qsPayload = queryString.stringify(payload);
     const response = await fetch(
-      `${this.relayerUrl}${
-        RELAYER_HTTP_ENDPOINTS.PENDING_BETS
-      }?address=${address}&baseToken=${token}`
+      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.PENDING_BETS}?${qsPayload}`
     );
     const textResponse = await response.text();
     if (response.status !== 200) {
@@ -497,6 +509,53 @@ class SportX extends EventEmitter implements ISportX {
     const { data } = result;
     const pendingBets: IPendingBet[] = data;
     return pendingBets;
+  }
+
+  public async getTrades(
+    startDate?: number,
+    endDate?: number,
+    settled?: boolean
+  ): Promise<ITrade[]> {
+    this.debug("getTrades");
+    if (!isUndefined(startDate) && !isNumber(startDate)) {
+      throw new APISchemaError(`startDate is not a valid unix date.`);
+    }
+    if (!isUndefined(endDate) && !isNumber(endDate)) {
+      throw new APISchemaError(`endDate is not a valid unix date.`);
+    }
+    if (!isUndefined(settled) && !isBoolean(settled)) {
+      throw new APISchemaError(`settled is not a valid boolean value.`);
+    }
+    const payload = {
+      ...(!isUndefined(startDate) && { startDate }),
+      ...(!isUndefined(endDate) && { endDate }),
+      ...(!isUndefined(settled) && { settled })
+    };
+    const qsPayload = queryString.stringify(payload);
+    const response = await fetch(
+      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.TRADES}?${qsPayload}`
+    );
+    const textResponse = await response.text();
+    if (response.status !== 200) {
+      this.debug(response.status);
+      this.debug(response.statusText);
+      throw new APIError(
+        `Can't get orders. Response code: ${
+          response.status
+        }. Result: ${textResponse}`
+      );
+    }
+    const { result, valid } = tryParseJson(textResponse);
+    if (!valid) {
+      throw new APIError(`Can't parse JSON ${textResponse}`);
+    }
+    this.debug("Relayer response");
+    this.debug(result);
+    const {
+      data: { trades }
+    } = result;
+    const ownerTrades: ITrade[] = trades;
+    return ownerTrades;
   }
 
   public async getOrders(

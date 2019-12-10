@@ -96,6 +96,19 @@ export interface INewOrder {
   isMakerBettingOutcomeOne: boolean;
 }
 
+export interface ITrade {
+  maker: string;
+  taker: string;
+  takerAmount: string;
+  takerEscrow: string;
+  orderHash: string;
+  percentageOdds: string;
+  marketHash: string;
+  isMakerBettingOutcomeOne: boolean;
+  betTime: number;
+  settled: boolean;
+}
+
 export interface IPendingBet {
   marketHashes: string[];
   percentageOdds: string[];

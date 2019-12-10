@@ -8,7 +8,8 @@
     "debug": "^4.1.1",
     "ethers": "^4.0.28",
     "lodash": "^4.17.15",
-    "moment": "^2.24.0"
+    "moment": "^2.24.0",
+    "query-string": "^6.9.0"
   },
   "repository": "github:sportx-bet/sportx-js",
   "homepage": "https://github.com/sportx-bet/sportx-js",
