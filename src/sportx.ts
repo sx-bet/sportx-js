@@ -672,7 +672,6 @@ class SportX extends EventEmitter implements ISportX {
       expiry: 0,
       allowed: true
     };
-    console.log(walletAddress)
     const signPayload = getDaiPermitEIP712Payload(
       details,
       chainId,
@@ -698,7 +697,7 @@ class SportX extends EventEmitter implements ISportX {
       this.debug(response.status);
       this.debug(response.statusText);
       throw new APIError(
-        `Can't get orders. Response code: ${
+        `Can't approve SportX contracts. Response code: ${
           response.status
         }. Result: ${textResponse}`
       );
