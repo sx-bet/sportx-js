@@ -31,12 +31,15 @@ You can do the following things with this API:
 11. Subscribe to a game and get updates when any of the underlying markets (spread, money line, over under) change
 12. Subscribe to an address and get updates when that addresses' bookmaker orders change
 13. Get past trades (graded/settled and ungraded/unsettled)
+14. Approve SportX contracts for DAI trading
 
 We support betting in DAI or WETH.
 
-In any case, to get started, you can either initialize via your ethereum private key or initialize via an existing web3 instance. *Ensure that the backing provider for the web3 instance matches the network.*
+In any case, to get started, you can either initialize via your ethereum private key or initialize via an existing web3 instance. Examples below assuming you are using environment variables to store sensitive information.
 
 ### Initializing via ethereum private key
+
+For this you will need a URL of an Ethereum provider to connect to the network along with your Ethereum private key. You can get a dedicated URL at https://infura.io. *Ensure that the provider matches the specified environment. i.e., don't use a rinkeby provider for mainnet.*
 
 ```typescript
 import { Environments, newSportX } from "@sportx-bet/sportx-js";
@@ -44,14 +47,13 @@ import { Environments, newSportX } from "@sportx-bet/sportx-js";
 async function main() {
   const sportX = await newSportX(
     Environments.RINKEBY,
-    process.env.ETHEREUM_PRIVATE_KEY
+    process.env.ETHEREUM_PRIVATE_KEY,
+    process.env.PROVIDER_URL
   );
 }
 ```
 
-Note that you do not need a SportX API key to get started - this is just your Ethereum private key.
-
-`newSportX` returns a promise that resolves to an initialized SportX API object.
+Note that you do not need a SportX API key to get started. 
 
 ### Initializing via an existing web3 instance.
 
@@ -63,12 +65,15 @@ async function main() {
   const sportX = await newSportX(
     Environments.RINKEBY,
     undefined,
+    undefined,
     new providers.Web3Provider(web3.currentProvider)
   )
 }
 ```
 
-The following assume you have an initialized sportX API object.
+`newSportX` returns a promise that resolves to an initialized SportX API object.
+
+The following assumes you have an initialized sportX API object.
 
 ### Get all the active markets
 
@@ -313,6 +318,8 @@ Example output:
 
 ### Submit a new order to a market
 
+*Note that to submit new orders you will first have to approve the SportX contracts for trading. See "Approve SportX contracts for DAI trading"*
+
 The odds in the API are all in a special implied format. For example, 2.0 (decimal) = 0.5 (implied). You'll need to convert your odds into implied in order to submit a new order to SportX. The odds you submit to place a new order on SportX are the odds you will receive as a bookmaker. Best explained with an example:
 
 The payload you need to submit looks like this:
@@ -541,6 +548,8 @@ Typically, you would use these "suggestions" to actually fill an order. See the 
 ### Filling orders
 
 To actually fill orders on SportX, you will need the actual orders themselves which you can obtain from `getOrders(marketHash)` as well as the amount(s) you want to fill each order.
+
+*Note that to submit orders you will first have to approve the SportX contracts for trading. See "Approve SportX contracts for DAI trading"*
 
 The orders are filled meta style, meaning that the filler does not pay for gas and instead the user just signs an "intent to fill" hash. The API covers the gas fee.
 
@@ -793,6 +802,25 @@ Which produces unsettled trades like so:
    }
 ]
 ```
+
+### Approve SportX contracts for DAI trading
+Before you are able to fill orders or submit new orders, you need to approve the SportX contracts for trading. You can do this by simply calling:
+
+```typescript
+const result = await sportX.approveSportXContractsDai()
+console.log(result)
+```
+
+which produces:
+```json
+{ "status": "success",
+  "data":
+   { "hash":
+      "0x71a67000f7bfd91db39115abd437dc33c7bd774d981d11ac54e00606ea11fa95" } }
+```
+
+You can track the status of the transaction on https://etherscan.io with the hash given by `hash`. Once this is complete, you will be able to place fill orders and submit new orders.
+
 
 ## Debugging
 
