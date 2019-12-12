@@ -6,6 +6,7 @@
     "bignumber.js": "^9.0.0",
     "cross-fetch": "^3.0.4",
     "debug": "^4.1.1",
+    "eth-sig-util": "^2.5.2",
     "ethers": "^4.0.28",
     "lodash": "^4.17.15",
     "moment": "^2.24.0",
@@ -30,6 +31,7 @@
   "devDependencies": {
     "@types/chai": "^4.1.7",
     "@types/debug": "^4.1.4",
+    "@types/eth-sig-util": "^2.1.0",
     "@types/lodash": "^4.14.144",
     "@types/mocha": "^5.2.7",
     "@types/node-fetch": "^2.3.5",

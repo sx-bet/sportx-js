@@ -1,6 +1,6 @@
 import { Signer } from "ethers";
 import { arrayify, BigNumber, solidityKeccak256 } from "ethers/utils";
-import { IContractOrder } from "../types/internal";
+import { IContractOrder, IPermit } from "../types/internal";
 import { IRelayerMakerOrder } from "../types/relayer";
 import { convertToContractOrder } from "./convert";
 
@@ -122,4 +122,43 @@ export function getMultiFillHash(
     );
   }
   return totalHash;
+}
+
+export function getDaiPermitEIP712Payload(
+  details: IPermit,
+  chainId: number,
+  verifyingContract: string
+) {
+  const payload = {
+    types: {
+      EIP712Domain: [
+        { name: "name", type: "string" },
+        { name: "version", type: "string" },
+        { name: "chainId", type: "uint256" },
+        { name: "verifyingContract", type: "address" }
+      ],
+      Permit: [
+        { name: "holder", type: "address" },
+        { name: "spender", type: "address" },
+        { name: "nonce", type: "uint256" },
+        { name: "expiry", type: "uint256" },
+        { name: "allowed", type: "bool" }
+      ]
+    },
+    primaryType: "Permit",
+    domain: {
+      name: "Dai Stablecoin",
+      version: "1",
+      chainId,
+      verifyingContract
+    },
+    message: {
+      holder: details.holder,
+      spender: details.spender,
+      nonce: details.nonce,
+      expiry: details.expiry,
+      allowed: details.allowed
+    }
+  };
+  return payload;
 }

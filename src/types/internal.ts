@@ -13,3 +13,11 @@ export interface IContractOrder {
   executor: string;
   isMakerBettingOutcomeOne: boolean;
 }
+
+export interface IPermit {
+  holder: string;
+  spender: string;
+  nonce: number;
+  expiry: number;
+  allowed: boolean;
+}

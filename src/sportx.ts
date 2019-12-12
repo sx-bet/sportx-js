@@ -1,8 +1,10 @@
 import * as ably from "ably";
 import fetch from "cross-fetch";
 import debug from "debug";
+import ethSigUtil from "eth-sig-util";
 import { providers, Signer, utils, Wallet } from "ethers";
 import { Zero } from "ethers/constants";
+import { JsonRpcProvider } from "ethers/providers";
 import { bigNumberify, isHexString, randomBytes } from "ethers/utils";
 import { EventEmitter } from "events";
 import queryString from "query-string";
@@ -14,10 +16,13 @@ import {
   RELAYER_HTTP_ENDPOINTS,
   RELAYER_TIMEOUT,
   RINKEBY_RELAYER_URL,
-  Tokens
+  Tokens,
+  TOKEN_ADDRESSES,
+  TOKEN_TRANSFER_PROXY_ADDRESS
 } from "./constants";
 import { APIError } from "./errors/api_error";
 import { APISchemaError } from "./errors/schema_error";
+import { IPermit } from "./types/internal";
 import {
   IDetailedRelayerMakerOrder,
   ILeague,
@@ -37,6 +42,7 @@ import {
 import { convertToContractOrder } from "./utils/convert";
 import { tryParseJson } from "./utils/misc";
 import {
+  getDaiPermitEIP712Payload,
   getMultiFillHash,
   getOrderHash,
   getOrderSignature
@@ -76,6 +82,7 @@ export interface ISportX extends EventEmitter {
     endDate?: number,
     settled?: boolean
   ): Promise<ITrade[]>;
+  approveSportXContractsDai(): Promise<IRelayerResponse>;
   subscribeGameOrderBook(compactGameId: string): Promise<void>;
   unsubscribeGameOrderBook(compactGameId: string): Promise<void>;
   subscribeActiveOrders(maker: string): Promise<void>;
@@ -89,24 +96,36 @@ interface IChannels {
 class SportX extends EventEmitter implements ISportX {
   private signingWallet: Signer;
   private relayerUrl: string;
+  private provider: JsonRpcProvider;
   private initialized: boolean = false;
   private debug = debug("sportx-js");
   private metadata!: IMetadata;
   private ably!: ably.Types.RealtimePromise;
   private ablyChannels!: IChannels;
+  private environment: Environments;
+  private privateKey!: string;
 
   constructor(
     env: Environments,
     privateKey?: string,
+    providerUrl?: string,
     provider?: providers.Web3Provider
   ) {
     super();
     if (privateKey && !isHexString(privateKey)) {
       throw new Error(`${privateKey} is not a valid private key.`);
     } else if (privateKey) {
+      if (!providerUrl) {
+        throw new Error(
+          `Provider URL must be provided if initializing via private key`
+        );
+      }
+      this.provider = new JsonRpcProvider(providerUrl);
       this.signingWallet = new Wallet(privateKey);
+      this.privateKey = privateKey;
     } else if (provider) {
       this.signingWallet = provider.getSigner(0);
+      this.provider = provider;
     } else {
       throw new Error(`Neither privateKey nor provider provided.`);
     }
@@ -117,6 +136,7 @@ class SportX extends EventEmitter implements ISportX {
     } else {
       throw new Error(`Invalid environment: ${env}`);
     }
+    this.environment = env;
   }
 
   public async init() {
@@ -642,6 +662,74 @@ class SportX extends EventEmitter implements ISportX {
     await this.unsubscribeAblyChannel(CHANNEL_BASE_KEYS.ACTIVE_ORDERS, maker);
   }
 
+  public async approveSportXContractsDai() {
+    const { chainId } = await this.provider.getNetwork();
+    const walletAddress = await this.signingWallet.getAddress();
+    const details: IPermit = {
+      holder: walletAddress,
+      spender: TOKEN_TRANSFER_PROXY_ADDRESS[this.environment],
+      nonce: 0,
+      expiry: 0,
+      allowed: true
+    };
+    console.log(walletAddress)
+    const signPayload = getDaiPermitEIP712Payload(
+      details,
+      chainId,
+      TOKEN_ADDRESSES[Tokens.DAI][this.environment]
+    );
+    const signature = await this.getEip712Signature(signPayload);
+    const payload = {
+      ...details,
+      signature
+    };
+    const response = await fetch(
+      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.DAI_APPROVAL}`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
+    );
+    const textResponse = await response.text();
+    if (response.status !== 200) {
+      this.debug(response.status);
+      this.debug(response.statusText);
+      throw new APIError(
+        `Can't get orders. Response code: ${
+          response.status
+        }. Result: ${textResponse}`
+      );
+    }
+    const { result, valid } = tryParseJson(textResponse);
+    if (!valid) {
+      throw new APIError(`Can't parse JSON ${textResponse}`);
+    }
+    this.debug("Relayer response");
+    this.debug(result);
+    return result as IRelayerResponse;
+  }
+
+  private async getEip712Signature(payload: any) {
+    if (this.privateKey) {
+      const bufferPrivateKey = Buffer.from(this.privateKey.substring(2), "hex");
+      const signature: string = (ethSigUtil as any).signTypedData_v4(
+        bufferPrivateKey,
+        { data: payload }
+      );
+      return signature;
+    } else {
+      const walletAddress = await this.signingWallet.getAddress();
+      const signature: string = await this.provider.send("eth_signTypedData", [
+        walletAddress,
+        payload
+      ]);
+      return signature;
+    }
+  }
+
   private async subscribeAblyChannel(baseChannel: string, subChannel: string) {
     const channelName = `${baseChannel}:${subChannel}`;
     if (this.ablyChannels[channelName]) {
@@ -671,9 +759,10 @@ class SportX extends EventEmitter implements ISportX {
 export async function newSportX(
   env: Environments,
   privateKey?: string,
+  providerUrl?: string,
   provider?: providers.Web3Provider
 ) {
-  const sportX = new SportX(env, privateKey, provider);
+  const sportX = new SportX(env, privateKey, providerUrl, provider);
   await sportX.init();
   return sportX;
 }

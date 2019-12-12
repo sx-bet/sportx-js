@@ -21,7 +21,11 @@ describe("sportx", () => {
   const wallet = Wallet.fromMnemonic(TEST_MNEMONIC);
 
   before("should initialize", async () => {
-    sportX = await newSportX(Environments.RINKEBY, wallet.privateKey);
+    sportX = await newSportX(
+      Environments.RINKEBY,
+      wallet.privateKey,
+      process.env.PROVIDER_URL
+    );
   });
 
   it("should get metadata", async () => {
@@ -155,5 +159,9 @@ describe("sportx", () => {
   it("should unsubscribe from an account", async () => {
     const address = await wallet.getAddress();
     await sportX.unsubscribeActiveOrders(address);
+  });
+
+  it("should meta approve DAI", async () => {
+    await sportX.approveSportXContractsDai();
   });
 });

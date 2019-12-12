@@ -2,7 +2,8 @@ export {
   Environments,
   PRODUCTION_RELAYER_URL,
   RINKEBY_RELAYER_URL,
-  RELAYER_TIMEOUT
+  RELAYER_TIMEOUT,
+  Tokens
 } from "./constants";
 export * from "./errors";
 export * from "./sportx";
