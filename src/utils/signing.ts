@@ -1,6 +1,11 @@
-import { Signer } from "ethers";
-import { arrayify, BigNumber, solidityKeccak256 } from "ethers/utils";
-import { IContractOrder, IPermit } from "../types/internal";
+import { Signer, utils } from "ethers";
+import { arrayify } from "ethers/utils";
+import {
+  ICancelDetails,
+  IContractOrder,
+  IFillDetails,
+  IPermit
+} from "../types/internal";
 import { IRelayerMakerOrder } from "../types/relayer";
 import { convertToContractOrder } from "./convert";
 
@@ -12,31 +17,27 @@ export async function getOrderSignature(
   return getContractOrderSignature(contractOrder, wallet);
 }
 
-export function getOrderHash(order: IContractOrder) {
-  return solidityKeccak256(
+export function getOrderHash(order: IContractOrder): string {
+  return utils.solidityKeccak256(
     [
       "bytes32",
-      "uint256",
-      "uint256",
-      "uint256",
-      "uint256",
-      "uint256",
-      "uint256",
       "address",
+      "uint256",
+      "uint256",
+      "uint256",
+      "uint256",
       "address",
       "address",
       "bool"
     ],
     [
       order.marketHash,
+      order.baseToken,
       order.totalBetSize,
       order.percentageOdds,
       order.expiry,
-      order.relayerMakerFee,
-      order.relayerTakerFee,
       order.salt,
       order.maker,
-      order.relayer,
       order.executor,
       order.isMakerBettingOutcomeOne
     ]
@@ -51,77 +52,81 @@ async function getContractOrderSignature(
   return signer.signMessage(hash);
 }
 
-export function getFillHash(
-  order: IContractOrder,
-  takerAmount: BigNumber,
-  fillSalt: BigNumber,
-  submitterFee?: BigNumber
-): string {
-  const baseSolTypesArray = [
-    "bytes32",
-    "uint256",
-    "uint256",
-    "uint256",
-    "uint256",
-    "uint256",
-    "uint256",
-    "address",
-    "address",
-    "address",
-    "bool",
-    "uint256",
-    "uint256"
-  ];
-  const baseSolValsArray = [
-    order.marketHash,
-    order.totalBetSize,
-    order.percentageOdds,
-    order.expiry,
-    order.relayerMakerFee,
-    order.relayerTakerFee,
-    order.salt,
-    order.maker,
-    order.relayer,
-    order.executor,
-    order.isMakerBettingOutcomeOne,
-    takerAmount,
-    fillSalt
-  ];
-  if (submitterFee) {
-    baseSolTypesArray.push("uint256");
-    baseSolValsArray.push(submitterFee);
-  }
-  return solidityKeccak256(baseSolTypesArray, baseSolValsArray);
-}
-
-export function getMultiFillHash(
-  orders: IContractOrder[],
-  takerAmounts: BigNumber[],
-  fillSalt: BigNumber,
-  submitterFee?: BigNumber
-): string {
-  if (orders.length !== takerAmounts.length) {
-    throw new Error("Orders length is not the same as takerAmounts length");
-  }
-  let totalHash = getFillHash(
-    orders[0],
-    takerAmounts[0],
-    fillSalt,
-    submitterFee
-  );
-  if (orders.length === 1) {
-    return totalHash;
-  }
-  for (let index = 1; index < orders.length; index++) {
-    const order = orders[index];
-    const takerAmount = takerAmounts[index];
-    const fillHash = getFillHash(order, takerAmount, fillSalt, submitterFee);
-    totalHash = solidityKeccak256(
-      ["bytes32", "bytes32"],
-      [arrayify(totalHash), arrayify(fillHash)]
-    );
-  }
-  return totalHash;
+export function getFillOrderEIP712Payload(
+  fillDetails: IFillDetails,
+  chainId: number,
+  verifyingContract: string
+) {
+  const payload = {
+    types: {
+      EIP712Domain: [
+        { name: "name", type: "string" },
+        { name: "version", type: "string" },
+        { name: "chainId", type: "uint256" },
+        { name: "verifyingContract", type: "address" }
+      ],
+      Details: [
+        { name: "action", type: "string" },
+        { name: "market", type: "string" },
+        { name: "betting", type: "string" },
+        { name: "stake", type: "string" },
+        { name: "odds", type: "string" },
+        { name: "returning", type: "string" },
+        { name: "fills", type: "FillObject" }
+      ],
+      FillObject: [
+        { name: "orders", type: "Order[]" },
+        { name: "makerSigs", type: "bytes[]" },
+        { name: "takerAmounts", type: "uint256[]" },
+        { name: "fillSalt", type: "uint256" }
+      ],
+      Order: [
+        { name: "marketHash", type: "bytes32" },
+        { name: "baseToken", type: "address" },
+        { name: "totalBetSize", type: "uint256" },
+        { name: "percentageOdds", type: "uint256" },
+        { name: "expiry", type: "uint256" },
+        { name: "salt", type: "uint256" },
+        { name: "maker", type: "address" },
+        { name: "executor", type: "address" },
+        { name: "isMakerBettingOutcomeOne", type: "bool" }
+      ]
+    },
+    primaryType: "Details",
+    domain: {
+      name: "SportX",
+      version: "1.0",
+      chainId,
+      verifyingContract
+    },
+    message: {
+      action: fillDetails.action,
+      market: fillDetails.market,
+      betting: fillDetails.betting,
+      stake: fillDetails.stake,
+      odds: fillDetails.odds,
+      returning: fillDetails.returning,
+      fills: {
+        makerSigs: fillDetails.fills.makerSigs,
+        orders: fillDetails.fills.orders.map(order => ({
+          marketHash: order.marketHash,
+          baseToken: order.baseToken,
+          totalBetSize: order.totalBetSize.toString(),
+          percentageOdds: order.percentageOdds.toString(),
+          expiry: order.expiry.toString(),
+          salt: order.salt.toString(),
+          maker: order.maker,
+          executor: order.executor,
+          isMakerBettingOutcomeOne: order.isMakerBettingOutcomeOne
+        })),
+        takerAmounts: fillDetails.fills.takerAmounts.map(takerAmount =>
+          takerAmount.toString()
+        ),
+        fillSalt: fillDetails.fills.fillSalt.toString()
+      }
+    }
+  };
+  return payload;
 }
 
 export function getDaiPermitEIP712Payload(
@@ -159,6 +164,33 @@ export function getDaiPermitEIP712Payload(
       expiry: details.expiry,
       allowed: details.allowed
     }
+  };
+  return payload;
+}
+
+export function getCancelOrderEIP712Payload(
+  cancelDetails: ICancelDetails,
+  chainId: number
+) {
+  const payload = {
+    types: {
+      EIP712Domain: [
+        { name: "name", type: "string" },
+        { name: "version", type: "string" },
+        { name: "chainId", type: "uint256" }
+      ],
+      Details: [
+        { name: "message", type: "string" },
+        { name: "orders", type: "string[]" }
+      ]
+    },
+    primaryType: "Details",
+    domain: {
+      name: "CancelOrderSportX",
+      version: "1.0",
+      chainId
+    },
+    message: cancelDetails
   };
   return payload;
 }

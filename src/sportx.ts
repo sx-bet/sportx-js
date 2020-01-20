@@ -2,15 +2,15 @@ import * as ably from "ably";
 import fetch from "cross-fetch";
 import debug from "debug";
 import ethSigUtil from "eth-sig-util";
-import { providers, Signer, utils, Wallet } from "ethers";
-import { Zero } from "ethers/constants";
-import { JsonRpcProvider } from "ethers/providers";
+import { providers, Signer, Wallet } from "ethers";
+import { JsonRpcProvider, Web3Provider } from "ethers/providers";
 import { bigNumberify, isHexString, randomBytes } from "ethers/utils";
 import { EventEmitter } from "events";
 import queryString from "query-string";
-import { isArray, isBoolean, isNumber, isUndefined } from "util";
+import { isArray, isBoolean } from "util";
 import {
   CHANNEL_BASE_KEYS,
+  EIP712_FILL_HASHER_ADDRESSES,
   Environments,
   PRODUCTION_RELAYER_URL,
   RELAYER_HTTP_ENDPOINTS,
@@ -22,7 +22,12 @@ import {
 } from "./constants";
 import { APIError } from "./errors/api_error";
 import { APISchemaError } from "./errors/schema_error";
-import { IPermit } from "./types/internal";
+import {
+  ICancelDetails,
+  IFillDetails,
+  IFillDetailsMetadata,
+  IPermit
+} from "./types/internal";
 import {
   IDetailedRelayerMakerOrder,
   ILeague,
@@ -37,19 +42,23 @@ import {
   IRelayerResponse,
   ISignedRelayerMakerOrder,
   ISport,
-  ITrade
+  ITrade,
+  IGetTradesRequest
 } from "./types/relayer";
 import { convertToContractOrder } from "./utils/convert";
 import { tryParseJson } from "./utils/misc";
 import {
+  getCancelOrderEIP712Payload,
   getDaiPermitEIP712Payload,
-  getMultiFillHash,
+  getFillOrderEIP712Payload,
   getOrderHash,
   getOrderSignature
 } from "./utils/signing";
 import {
   isAddress,
   isPositiveBigNumber,
+  validateIFillDetailsMetadata,
+  validateIGetTradesRequest,
   validateINewOrderSchema,
   validateIRelayerMakerOrder
 } from "./utils/validation";
@@ -59,28 +68,33 @@ export interface ISportX extends EventEmitter {
   getMetadata(): Promise<IMetadata>;
   getLeagues(): Promise<ILeague[]>;
   getSports(): Promise<ISport[]>;
-  getActiveMarkets(token: Tokens): Promise<IMarket[]>;
+  getActiveMarkets(): Promise<IMarket[]>;
   newOrder(order: INewOrder): Promise<IRelayerResponse>;
-  cancelOrder(orderHashes: string[]): Promise<IRelayerResponse>;
-  getRecentPendingBets(address: string, token: Tokens): Promise<IPendingBet[]>;
+  cancelOrder(
+    orderHashes: string[],
+    message?: string
+  ): Promise<IRelayerResponse>;
+  getRecentPendingBets(address: string, baseToken: string): Promise<IPendingBet[]>;
   getOrders(
     marketHashes?: string[],
-    maker?: string
+    maker?: string,
+    baseToken?: string
   ): Promise<IDetailedRelayerMakerOrder[]>;
   fillOrders(
     orders: IRelayerMakerOrder[],
-    takerAmounts: string[]
+    takerAmounts: string[],
+    fillDetailsMetadata?: IFillDetailsMetadata,
+    affiliateAddress?: string
   ): Promise<IRelayerResponse>;
   suggestOrders(
     marketHash: string,
     betSize: string,
     takerDirectionOutcomeOne: boolean,
-    taker: string
+    taker: string,
+    baseToken: string
   ): Promise<IRelayerResponse>;
   getTrades(
-    startDate?: number,
-    endDate?: number,
-    settled?: boolean
+    tradeRequest: IGetTradesRequest
   ): Promise<ITrade[]>;
   approveSportXContractsDai(): Promise<IRelayerResponse>;
   subscribeGameOrderBook(compactGameId: string): Promise<void>;
@@ -104,6 +118,7 @@ class SportX extends EventEmitter implements ISportX {
   private ablyChannels!: IChannels;
   private environment: Environments;
   private privateKey!: string;
+  private chainId!: number;
 
   constructor(
     env: Environments,
@@ -153,6 +168,8 @@ class SportX extends EventEmitter implements ISportX {
       setTimeout(() => reject(), RELAYER_TIMEOUT);
     });
     this.metadata = await this.getMetadata();
+    const network = await this.provider.getNetwork();
+    this.chainId = network.chainId;
     this.initialized = true;
     this.ablyChannels = {};
     this.debug("Initialized");
@@ -233,14 +250,10 @@ class SportX extends EventEmitter implements ISportX {
     return data as ISport[];
   }
 
-  public async getActiveMarkets(token: Tokens): Promise<IMarket[]> {
+  public async getActiveMarkets(): Promise<IMarket[]> {
     this.debug("getActiveMarkets");
-    const payload = {
-      baseToken: token
-    };
-    const qsPayload = queryString.stringify(payload);
     const response = await fetch(
-      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.ACTIVE_MARKETS}?${qsPayload}`
+      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.ACTIVE_MARKETS}`
     );
     const textResponse = await response.text();
     if (response.status !== 200) {
@@ -258,8 +271,8 @@ class SportX extends EventEmitter implements ISportX {
     }
     this.debug("Relayer response");
     this.debug(result);
-    const { data } = result;
-    return data as IMarket[];
+    const { data: {markets} } = result;
+    return markets as IMarket[];
   }
 
   public async newOrder(order: INewOrder) {
@@ -276,10 +289,8 @@ class SportX extends EventEmitter implements ISportX {
       totalBetSize: bigNumBetSize.toString(),
       percentageOdds: order.percentageOdds,
       expiry: order.expiry.toString(),
-      relayerTakerFee: this.metadata.fees.relayerTakerFee,
-      relayerMakerFee: this.metadata.fees.relayerMakerFee,
       executor: this.metadata.executorAddress,
-      relayer: this.metadata.relayerAddress,
+      baseToken: order.baseToken,
       salt,
       isMakerBettingOutcomeOne: order.isMakerBettingOutcomeOne
     };
@@ -327,7 +338,8 @@ class SportX extends EventEmitter implements ISportX {
     marketHash: string,
     betSize: string,
     takerDirectionOutcomeOne: boolean,
-    taker: string
+    taker: string,
+    baseToken: string
   ) {
     this.debug("suggestOrders");
     if (!isHexString(marketHash)) {
@@ -342,11 +354,15 @@ class SportX extends EventEmitter implements ISportX {
     if (!isAddress(taker)) {
       throw new APISchemaError("taker is not a valid address");
     }
+    if (!isAddress(baseToken)) {
+      throw new APISchemaError("baseToken is not a valid address");
+    }
     const payload: IRelayerMarketOrderRequest = {
       marketHash,
       takerPayAmount: betSize,
       takerDirection: takerDirectionOutcomeOne ? "outcomeOne" : "outcomeTwo",
-      taker
+      taker,
+      baseToken
     };
     this.debug("Suggest orders payload:");
     this.debug(payload);
@@ -378,8 +394,10 @@ class SportX extends EventEmitter implements ISportX {
   }
 
   public async fillOrders(
-    orders: IRelayerMakerOrder[],
-    takerAmounts: string[]
+    orders: ISignedRelayerMakerOrder[],
+    takerAmounts: string[],
+    fillDetailsMetadata?: IFillDetailsMetadata,
+    affiliateAddress?: string
   ): Promise<IRelayerResponse> {
     this.debug("fillOrders");
     orders.forEach(order => {
@@ -389,6 +407,17 @@ class SportX extends EventEmitter implements ISportX {
         throw new APISchemaError(validation);
       }
     });
+    if (affiliateAddress && !isAddress(affiliateAddress)) {
+      this.debug("Affiliate address is malformed");
+      throw new APISchemaError("Affiliate address malformed.");
+    }
+    if (fillDetailsMetadata) {
+      const validation = validateIFillDetailsMetadata(fillDetailsMetadata);
+      if (validation !== "OK") {
+        this.debug("Metadata malformed");
+        throw new APISchemaError(validation);
+      }
+    }
     if (!isArray(takerAmounts)) {
       throw new APISchemaError("takerAmounts is not an array");
     }
@@ -396,26 +425,39 @@ class SportX extends EventEmitter implements ISportX {
       throw new APISchemaError("takerAmounts has some invalid number strings");
     }
     const fillSalt = bigNumberify(randomBytes(32));
-    const submitterFee = Zero;
     const solidityOrders = orders.map(convertToContractOrder);
     const orderHashes = solidityOrders.map(getOrderHash);
-    const bigNumTakerAmounts = takerAmounts.map(bigNumberify);
-    const fillHash = getMultiFillHash(
-      solidityOrders,
-      bigNumTakerAmounts,
-      fillSalt,
-      submitterFee
+    const finalFillDetailsMetadata: IFillDetailsMetadata = fillDetailsMetadata || {
+      action: "N/A",
+      market: "N/A",
+      betting: "N/A",
+      stake: "N/A",
+      odds: "N/A",
+      returning: "N/A"
+    };
+    const fillDetails: IFillDetails = {
+      ...finalFillDetailsMetadata,
+      fills: {
+        orders: orders.map(convertToContractOrder),
+        makerSigs: orders.map(order => order.signature),
+        takerAmounts: takerAmounts.map(bigNumberify),
+        fillSalt
+      }
+    };
+    const fillOrderPayload = getFillOrderEIP712Payload(
+      fillDetails,
+      this.chainId,
+      EIP712_FILL_HASHER_ADDRESSES[this.environment]
     );
-    const takerSignature = await this.signingWallet.signMessage(
-      utils.arrayify(fillHash)
-    );
+    const takerSignature = await this.getEip712Signature(fillOrderPayload);
     const payload: IRelayerMetaFillOrderRequest = {
       orderHashes,
       takerAmounts,
       taker: await this.signingWallet.getAddress(),
       takerSig: takerSignature,
       fillSalt: fillSalt.toString(),
-      submitterFee: submitterFee.toString()
+      ...finalFillDetailsMetadata,
+      affiliateAddress
     };
     this.debug("Meta fill payload");
     this.debug(payload);
@@ -446,7 +488,7 @@ class SportX extends EventEmitter implements ISportX {
     return result as IRelayerResponse;
   }
 
-  public async cancelOrder(orderHashes: string[]) {
+  public async cancelOrder(orderHashes: string[], message?: string) {
     this.debug("cancelOrder");
     if (!isArray(orderHashes)) {
       throw new APISchemaError("orderHashes is not an array");
@@ -454,15 +496,21 @@ class SportX extends EventEmitter implements ISportX {
     if (!orderHashes.every(hash => isHexString(hash))) {
       throw new APISchemaError("orderHashes has some invalid order hashes.");
     }
-    const signingPayload = utils.solidityKeccak256(
-      [...orderHashes.map(() => "bytes32"), "bool"],
-      [...orderHashes, true]
+    if (message && typeof message !== "string") {
+      throw new APISchemaError("message is not a string");
+    }
+    const finalMessage = message || "N/A";
+    const cancelDetails: ICancelDetails = {
+      orders: orderHashes,
+      message: finalMessage
+    };
+    const cancelOrderPayload = getCancelOrderEIP712Payload(
+      cancelDetails,
+      this.chainId
     );
-    const cancelSignature = await this.signingWallet.signMessage(
-      utils.arrayify(signingPayload)
-    );
+    const cancelSignature = await this.getEip712Signature(cancelOrderPayload);
     const payload: IRelayerCancelOrderRequest = {
-      orderHashes,
+      ...cancelDetails,
       cancelSignature
     };
     this.debug("Cancel order payload");
@@ -496,7 +544,7 @@ class SportX extends EventEmitter implements ISportX {
 
   public async getRecentPendingBets(
     address: string,
-    token: Tokens
+    baseToken: string
   ): Promise<IPendingBet[]> {
     this.debug("getRecentPendingBets");
     if (!isAddress(address)) {
@@ -504,7 +552,7 @@ class SportX extends EventEmitter implements ISportX {
     }
     const payload = {
       address,
-      baseToken: token
+      baseToken
     };
     const qsPayload = queryString.stringify(payload);
     const response = await fetch(
@@ -532,28 +580,22 @@ class SportX extends EventEmitter implements ISportX {
   }
 
   public async getTrades(
-    startDate?: number,
-    endDate?: number,
-    settled?: boolean
+    tradeRequest: IGetTradesRequest
   ): Promise<ITrade[]> {
     this.debug("getTrades");
-    if (!isUndefined(startDate) && !isNumber(startDate)) {
-      throw new APISchemaError(`startDate is not a valid unix date.`);
+    const validation = validateIGetTradesRequest(
+      tradeRequest
+    );
+    if (validation !== "OK") {
+      throw new APISchemaError(validation);
     }
-    if (!isUndefined(endDate) && !isNumber(endDate)) {
-      throw new APISchemaError(`endDate is not a valid unix date.`);
-    }
-    if (!isUndefined(settled) && !isBoolean(settled)) {
-      throw new APISchemaError(`settled is not a valid boolean value.`);
-    }
-    const payload = {
-      ...(!isUndefined(startDate) && { startDate }),
-      ...(!isUndefined(endDate) && { endDate }),
-      ...(!isUndefined(settled) && { settled })
-    };
-    const qsPayload = queryString.stringify(payload);
     const response = await fetch(
-      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.TRADES}?${qsPayload}`
+      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.TRADES}`,
+      {
+        method: "POST",
+        body: JSON.stringify(tradeRequest),
+        headers: { "Content-Type": "application/json" }
+      }
     );
     const textResponse = await response.text();
     if (response.status !== 200) {
@@ -580,7 +622,8 @@ class SportX extends EventEmitter implements ISportX {
 
   public async getOrders(
     marketHashes?: string[],
-    maker?: string
+    maker?: string,
+    baseToken?: string
   ): Promise<IDetailedRelayerMakerOrder[]> {
     this.debug("getOrders");
     if (marketHashes && !marketHashes.every(hash => isHexString(hash))) {
@@ -589,13 +632,15 @@ class SportX extends EventEmitter implements ISportX {
       );
     }
     if (maker && !isAddress(maker)) {
-      throw new APISchemaError(
-        `One of the supplied maker addresses is not a valid address.`
-      );
+      throw new APISchemaError(`maker is not a valid address`);
+    }
+    if (baseToken && !isAddress(baseToken)) {
+      throw new APISchemaError(`baseToken is not a valid address`);
     }
     const payload = {
       ...(marketHashes && { marketHashes }),
-      ...(maker && { maker })
+      ...(maker && { maker }),
+      ...(baseToken && { baseToken })
     };
     const response = await fetch(
       `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.ORDERS}`,
@@ -717,6 +762,15 @@ class SportX extends EventEmitter implements ISportX {
       const signature: string = (ethSigUtil as any).signTypedData_v4(
         bufferPrivateKey,
         { data: payload }
+      );
+      return signature;
+    } else if (
+      (this.provider as Web3Provider)._web3Provider.isMetaMask === true
+    ) {
+      const walletAddress = await this.signingWallet.getAddress();
+      const signature: string = await this.provider.send(
+        "eth_signTypedData_v4",
+        [walletAddress, JSON.stringify(payload)]
       );
       return signature;
     } else {

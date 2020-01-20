@@ -20,19 +20,24 @@ export enum Tokens {
 }
 
 export const TOKEN_TRANSFER_PROXY_ADDRESS = {
-  [Environments.RINKEBY]: "0x6960fa4540c92b9fB08c4afBE04cD83f3CCf0378",
+  [Environments.RINKEBY]: "0x04CEB6182EDC5dEdedfa84EA6F112f01f1195830",
   [Environments.PRODUCTION]: "0x95B90DbA0516FD2aa991A2F4afa7817546ffB06d"
 }
 
 export const TOKEN_ADDRESSES = {
   [Tokens.DAI]: {
-    [Environments.RINKEBY]: "0xd32f156f5A94eF3E5A72978D9B411D520a5F82AE",
+    [Environments.RINKEBY]: "0x44495672C86eEeE14adA9a3e453EEd68a338cdC1",
     [Environments.PRODUCTION]: "0x6b175474e89094c44da98b954eedeac495271d0f"
   },
   [Tokens.WETH]: {
-    [Environments.RINKEBY]: "0x72c01f172C8493dE1d3054549B5b1Fe42B5cf42B",
+    [Environments.RINKEBY]: "0xe40E1E31D2C313539e5D11cab684Ab98458BF4B3",
     [Environments.PRODUCTION]: "NOT_IMPLEMENTED"
   }
+}
+
+export const EIP712_FILL_HASHER_ADDRESSES = {
+  [Environments.RINKEBY]: "0x527f5aE68df7cE999381abffe1e28537692cBc96",
+  [Environments.PRODUCTION]: "NOT_IMPLEMENTED"
 }
 
 export const RELAYER_HTTP_ENDPOINTS = {

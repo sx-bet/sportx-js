@@ -3,15 +3,16 @@ import { Wallet } from "ethers";
 import { parseUnits } from "ethers/utils";
 import "mocha";
 import moment from "moment";
-import { INewOrder } from "../src";
-import { Environments, Tokens } from "../src/constants";
+import { IMetadata, INewOrder } from "../src";
+import { Environments, TOKEN_ADDRESSES, Tokens } from "../src/constants";
 import { ISportX, newSportX } from "../src/sportx";
 import {
   convertFromAPIPercentageOdds,
   convertToAPIPercentageOdds,
-  convertToTrueTokenAmount,
-  getCompactGameId
+  convertToTrueTokenAmount
 } from "../src/utils/convert";
+
+// tslint:disable no-string-literal
 
 const TEST_MNEMONIC =
   "elegant execute say gain evil afford puppy upon amateur planet lunar pen";
@@ -19,6 +20,7 @@ const TEST_MNEMONIC =
 describe("sportx", () => {
   let sportX: ISportX;
   const wallet = Wallet.fromMnemonic(TEST_MNEMONIC);
+  const daiAddress = TOKEN_ADDRESSES[Tokens.DAI][Environments.RINKEBY];
 
   before("should initialize", async () => {
     sportX = await newSportX(
@@ -30,7 +32,7 @@ describe("sportx", () => {
 
   it("should get metadata", async () => {
     const metadata = await sportX.getMetadata();
-    expect(metadata.relayerAddress).to.exist;
+    expect(metadata.executorAddress).to.exist;
   });
 
   it("should get leagues", async () => {
@@ -44,12 +46,12 @@ describe("sportx", () => {
   });
 
   it("should get active markets", async () => {
-    const activeMarkets = await sportX.getActiveMarkets(Tokens.DAI);
+    const activeMarkets = await sportX.getActiveMarkets();
     expect(activeMarkets.length).greaterThan(0);
   });
 
   it("should make a new order", async () => {
-    const activeMarkets = await sportX.getActiveMarkets(Tokens.DAI);
+    const activeMarkets = await sportX.getActiveMarkets();
     const firstMarketHash = activeMarkets[0].marketHash;
     const newOrder: INewOrder = {
       marketHash: firstMarketHash,
@@ -58,14 +60,15 @@ describe("sportx", () => {
       expiry: moment()
         .add(1, "hour")
         .unix(),
-      isMakerBettingOutcomeOne: true
+      isMakerBettingOutcomeOne: true,
+      baseToken: daiAddress
     };
     const response = await sportX.newOrder(newOrder);
     expect(response.status).to.equal("success");
   });
 
   it("should cancel an order", async () => {
-    const activeMarkets = await sportX.getActiveMarkets(Tokens.DAI);
+    const activeMarkets = await sportX.getActiveMarkets();
     const firstMarketHash = activeMarkets[0].marketHash;
     const newOrder: INewOrder = {
       marketHash: firstMarketHash,
@@ -74,12 +77,13 @@ describe("sportx", () => {
       expiry: moment()
         .add(1, "hour")
         .unix(),
-      isMakerBettingOutcomeOne: true
+      isMakerBettingOutcomeOne: true,
+      baseToken: daiAddress
     };
     const {
-      data: { orderHashes }
+      data: { orders }
     } = await sportX.newOrder(newOrder);
-    const response = await sportX.cancelOrder(orderHashes);
+    const response = await sportX.cancelOrder(orders, "Cancel Orders");
     expect(response.status).to.equal("success");
   });
 
@@ -90,7 +94,7 @@ describe("sportx", () => {
   });
 
   it("should get active orders for an address", async () => {
-    const activeMarkets = await sportX.getActiveMarkets(Tokens.DAI);
+    const activeMarkets = await sportX.getActiveMarkets();
     const orders = await sportX.getOrders([activeMarkets[0].marketHash]);
     const maker = orders[0].maker;
     const activeOrders = await sportX.getOrders(undefined, maker);
@@ -98,39 +102,42 @@ describe("sportx", () => {
   });
 
   it("should get active orders for a market", async () => {
-    const activeMarkets = await sportX.getActiveMarkets(Tokens.DAI);
+    const activeMarkets = await sportX.getActiveMarkets();
     const orders = await sportX.getOrders([activeMarkets[0].marketHash]);
     expect(orders.length).greaterThan(0);
   });
 
   it("should suggest orders", async () => {
-    const activeMarkets = await sportX.getActiveMarkets(Tokens.DAI);
+    const activeMarkets = await sportX.getActiveMarkets();
     const suggestions = await sportX.suggestOrders(
       activeMarkets[10].marketHash,
       convertToTrueTokenAmount(10),
       false,
-      wallet.address
+      wallet.address,
+      daiAddress
     );
     expect(suggestions.status).to.equal("success");
   });
 
   it("should get pending bets", async () => {
-    await sportX.getRecentPendingBets(wallet.address, Tokens.DAI);
+    await sportX.getRecentPendingBets(wallet.address, daiAddress);
   });
 
   it("should get trades", async () => {
-    await sportX.getTrades();
+    const trades = await sportX.getTrades({});
+    expect(trades.length).greaterThan(0);
   });
 
   it("should fill an order", async () => {
-    const activeMarkets = await sportX.getActiveMarkets(Tokens.DAI);
+    const activeMarkets = await sportX.getActiveMarkets();
     const market = activeMarkets[10].marketHash;
     const orders = await sportX.getOrders([market]);
     const suggestions = await sportX.suggestOrders(
       market,
       convertToTrueTokenAmount(10),
       true,
-      wallet.address
+      wallet.address,
+      daiAddress
     );
     const ordersToFill = orders.filter(order =>
       suggestions.data.orderHashes.includes(order.orderHash)
@@ -139,16 +146,6 @@ describe("sportx", () => {
       convertToTrueTokenAmount(10)
     ]);
     expect(fill.status).to.equal("success");
-  });
-
-  it("should subscribe to a game", async () => {
-    const activeMarkets = await sportX.getActiveMarkets(Tokens.DAI);
-    await sportX.subscribeGameOrderBook(getCompactGameId(activeMarkets[0]));
-  });
-
-  it("should unsubscribe from a game", async () => {
-    const activeMarkets = await sportX.getActiveMarkets(Tokens.DAI);
-    await sportX.unsubscribeGameOrderBook(getCompactGameId(activeMarkets[0]));
   });
 
   it("should subscribe to an account", async () => {

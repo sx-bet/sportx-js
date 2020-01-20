@@ -1,15 +1,13 @@
-import { ISignedRelayerMakerOrder } from "./relayer";
+import { ICancelDetails } from "./internal";
 
 export interface IRelayerMakerOrder {
   marketHash: string;
+  baseToken: string;
   maker: string;
   totalBetSize: string;
   percentageOdds: string;
   expiry: string;
-  relayerTakerFee: string;
   executor: string;
-  relayerMakerFee: string;
-  relayer: string;
   salt: string;
   isMakerBettingOutcomeOne: boolean;
 }
@@ -18,8 +16,9 @@ export interface ISignedRelayerMakerOrder extends IRelayerMakerOrder {
   signature: string;
 }
 
-export interface IRelayerCancelOrderRequest {
-  orderHashes: string[];
+export interface IRelayerCancelOrderRequest extends ICancelDetails {
+  message: string;
+  orders: string[];
   cancelSignature: string;
 }
 
@@ -28,6 +27,17 @@ export interface IRelayerMarketOrderRequest {
   takerPayAmount: string;
   takerDirection: "outcomeOne" | "outcomeTwo";
   taker: string;
+  baseToken: string;
+}
+
+export interface IGetTradesRequest {
+  startDate?: number;
+  endDate?: number;
+  bettor?: string;
+  settled?: boolean;
+  marketHashes?: string[];
+  baseToken?: string;
+  maker?: boolean;
 }
 
 export interface IRelayerMetaFillOrderRequest {
@@ -36,7 +46,13 @@ export interface IRelayerMetaFillOrderRequest {
   taker: string;
   takerSig: string;
   fillSalt: string;
-  submitterFee: string;
+  action: string;
+  market: string;
+  betting: string;
+  stake: string;
+  odds: string;
+  returning: string;
+  affiliateAddress?: string;
 }
 
 export interface IDetailedRelayerMakerOrder extends ISignedRelayerMakerOrder {
@@ -55,15 +71,14 @@ export interface IRelayerResponse {
 }
 
 export interface IMetadata {
-  relayerAddress: string;
   executorAddress: string;
-  fees: {
-    relayerMakerFee: string;
-    relayerTakerFee: string;
-  };
   oracleFees: {
     DAI: string;
     WETH: string;
+  };
+  sportXAffiliate: {
+    address: string;
+    amount: string;
   };
   makerOrderMinimums: {
     DAI: string;
@@ -73,13 +88,16 @@ export interface IMetadata {
     DAI: string;
     WETH: string;
   };
+  addresses: {
+    DAI: string;
+    WETH: string;
+  };
 }
 
 export interface ILeague {
   leagueId: number;
   label: string;
   sportId: number;
-  referenceUrl: string;
   homeTeamFirst: boolean;
 }
 
@@ -92,20 +110,21 @@ export interface INewOrder {
   marketHash: string;
   totalBetSize: string;
   percentageOdds: string;
+  baseToken: string;
   expiry: number;
   isMakerBettingOutcomeOne: boolean;
 }
 
 export interface ITrade {
-  maker: string;
-  taker: string;
-  takerAmount: string;
-  takerEscrow: string;
+  baseToken: string;
+  bettor: string;
+  stake: string;
+  odds: string;
   orderHash: string;
-  percentageOdds: string;
   marketHash: string;
-  isMakerBettingOutcomeOne: boolean;
+  maker: boolean;
   betTime: number;
+  bettingOutcomeOne: boolean;
   settled: boolean;
 }
 
@@ -125,20 +144,14 @@ export interface IPendingBet {
 export interface IMarket {
   status: string;
   marketHash: string;
-  baseToken: string;
-  startDate: number;
-  expiryDate: number;
-  title: string;
   outcomeOneName: string;
   outcomeTwoName: string;
   outcomeVoidName: string;
   teamOneName: string;
   teamTwoName: string;
-  sportId: number;
-  leagueId: number;
   type: string;
+  gameTime: number;
   line?: number;
-  reportedOnBlockchain: boolean;
   reportedDate?: number;
   outcome?: number;
   teamOneScore?: number;
@@ -146,7 +159,10 @@ export interface IMarket {
   teamOneMeta?: string;
   teamTwoMeta?: string;
   marketMeta?: string;
-  sportLabel?: string;
-  homeTeamFirst?: boolean;
+  sportXeventId: string;
+  sportLabel: string;
+  sportId: number;
+  leagueId: number;
+  homeTeamFirst: boolean;
   leagueLabel?: string;
 }

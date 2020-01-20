@@ -5,8 +5,91 @@ import _ from "lodash";
 import moment from "moment";
 import { isBoolean } from "util";
 import { FRACTION_DENOMINATOR } from "../constants";
-import { INewOrder, IRelayerMakerOrder } from "../types/relayer";
+import { IFillDetailsMetadata } from "../types/internal";
+import {
+  IGetTradesRequest,
+  INewOrder,
+  IRelayerMakerOrder
+} from "../types/relayer";
 import { convertToAPIPercentageOdds } from "./convert";
+
+export function validateIGetTradesRequest(payload: IGetTradesRequest) {
+  const {
+    startDate,
+    endDate,
+    bettor,
+    settled,
+    marketHashes,
+    baseToken,
+    maker
+  } = payload;
+  if (
+    startDate !== undefined &&
+    (typeof startDate !== "number" ||
+      startDate < 0 ||
+      !Number.isInteger(startDate))
+  ) {
+    return "invalid startDate";
+  }
+  if (
+    endDate !== undefined &&
+    (typeof endDate !== "number" || endDate < 0 || !Number.isInteger(endDate))
+  ) {
+    return "invalid endDate";
+  }
+  if (
+    startDate !== undefined &&
+    endDate !== undefined &&
+    startDate >= endDate
+  ) {
+    return "startDate not before endDate";
+  }
+  if (bettor !== undefined && !isAddress(bettor)) {
+    return "invalid bettor";
+  }
+  if (settled !== undefined && typeof settled !== "boolean") {
+    return "invalid settled";
+  }
+  if (maker !== undefined && typeof maker !== "boolean") {
+    return "invalid maker";
+  }
+  if (marketHashes !== undefined && !Array.isArray(marketHashes)) {
+    return "invalid marketHashes";
+  }
+  if (baseToken !== undefined && !isAddress(baseToken)) {
+    return "invalid baseToken";
+  }
+  if (
+    marketHashes !== undefined &&
+    !marketHashes.every(hash => typeof hash === "string")
+  ) {
+    return "invalid marketHashes";
+  }
+  return "OK";
+}
+
+export function validateIFillDetailsMetadata(metadata: IFillDetailsMetadata) {
+  const { action, market, betting, stake, odds, returning } = metadata;
+  if (typeof action !== "string") {
+    return "action is not a string";
+  }
+  if (typeof market !== "string") {
+    return "market is not a string";
+  }
+  if (typeof betting !== "string") {
+    return "betting is not a string";
+  }
+  if (typeof stake !== "string") {
+    return "stake is not a string";
+  }
+  if (typeof odds !== "string") {
+    return "odds is not a string";
+  }
+  if (typeof returning !== "string") {
+    return "returning is not a string";
+  }
+  return "OK";
+}
 
 export function validateIRelayerMakerOrder(order: IRelayerMakerOrder) {
   const {
@@ -15,10 +98,8 @@ export function validateIRelayerMakerOrder(order: IRelayerMakerOrder) {
     totalBetSize,
     percentageOdds,
     expiry,
-    relayerTakerFee,
     executor,
-    relayerMakerFee,
-    relayer,
+    baseToken,
     salt,
     isMakerBettingOutcomeOne
   } = order;
@@ -41,17 +122,11 @@ export function validateIRelayerMakerOrder(order: IRelayerMakerOrder) {
   if (moment.unix(parseInt(expiry, 10)).isBefore(moment())) {
     return "expiry before current time.";
   }
-  if (!isNonNegativeBigNumber(relayerMakerFee)) {
-    return "relayerMakerFee as a number is not non-negative";
-  }
-  if (!isNonNegativeBigNumber(relayerTakerFee)) {
-    return "relayerTakerFee as a number is not non-negative";
-  }
   if (!isAddress(executor)) {
     return "executor is not a valid address";
   }
-  if (!isAddress(relayer)) {
-    return "relayer is not a valid address";
+  if (!isAddress(baseToken)) {
+    return "baseToken is not a valid address";
   }
   if (!isPositiveBigNumber(salt)) {
     return "salt as a number is not positive";
@@ -84,6 +159,9 @@ export function validateINewOrderSchema(order: INewOrder) {
   if (!_.isBoolean(order.isMakerBettingOutcomeOne)) {
     return "isMakerBettingOutcomeOne undefined or malformed.";
   }
+  if (!isAddress(order.baseToken)) {
+    return "baseToken undefined or malformed.";
+  }
   return "OK";
 }
 
@@ -96,15 +174,6 @@ export function isPositiveBigNumber(object: any): boolean {
   try {
     const bigNumber = bigNumberify(object);
     return bigNumber.gt(Zero);
-  } catch (e) {
-    return false;
-  }
-}
-
-function isNonNegativeBigNumber(object: any): boolean {
-  try {
-    const bigNumber = bigNumberify(object);
-    return bigNumber.gte(Zero);
   } catch (e) {
     return false;
   }
