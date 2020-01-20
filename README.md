@@ -28,10 +28,9 @@ You can do the following things with this API:
 8. Fill order(s)
 9. Get all active orders for an account
 10. Get pending bets for a user
-11. Subscribe to a game and get updates when any of the underlying markets (spread, money line, over under) change
-12. Subscribe to an address and get updates when that addresses' bookmaker orders change
-13. Get past trades (graded/settled and ungraded/unsettled)
-14. Approve SportX contracts for DAI trading
+11. Subscribe to an address and get updates when that addresses' bookmaker orders change
+12. Get past trades (graded/settled and ungraded/unsettled)
+13. Approve SportX contracts for DAI trading
 
 We support betting in DAI or WETH.
 
@@ -78,10 +77,8 @@ The following assumes you have an initialized sportX API object.
 ### Get all the active markets
 
 ```typescript
-const activeMarketsDai = await sportX.getActiveMarkets("DAI");
+const activeMarkets = await sportX.getActiveMarkets();
 console.log(activeMarketsDai);
-const activeMarketsWeth = await sportX.getActiveMarkets("WETH");
-console.log(activeMarketsWeth);
 ```
 
 Which produces an **array** of objects with the following schema:
@@ -90,20 +87,14 @@ Which produces an **array** of objects with the following schema:
 interface IMarket {
   status: string;
   marketHash: string;
-  baseToken: string;
-  startDate: number;
-  expiryDate: number;
-  title: string;
   outcomeOneName: string;
   outcomeTwoName: string;
   outcomeVoidName: string;
   teamOneName: string;
   teamTwoName: string;
-  sportId: number;
-  leagueId: number;
   type: string;
+  gameTime: number;
   line?: number;
-  reportedOnBlockchain: boolean;
   reportedDate?: number;
   outcome?: number;
   teamOneScore?: number;
@@ -111,8 +102,11 @@ interface IMarket {
   teamOneMeta?: string;
   teamTwoMeta?: string;
   marketMeta?: string;
-  sportLabel?: string;
-  homeTeamFirst?: boolean;
+  sportXeventId: string;
+  sportLabel: string;
+  sportId: number;
+  leagueId: number;
+  homeTeamFirst: boolean;
   leagueLabel?: string;
 }
 ```
@@ -125,23 +119,22 @@ Example for a money line market:
 
 ```json
 {
-  "baseToken": "DAI",
-  "expiryDate": 1560904200,
-  "group1": "Copa America",
-  "homeTeamFirst": true,
-  "leagueId": 178,
-  "leagueLabel": "Copa America",
-  "marketHash": "0x75f5d0544a38bf41afab5cfd0a2b40b8df32bd76d91bfa5ece47ba739b179e",
-  "outcomeOneName": "Brazil",
-  "outcomeTwoName": "Venezuela",
+  "status": "ACTIVE",
+  "marketHash": "0xee848defbfe6ebd564c12fc15018498329c3f9093167fde0f74742503cb75939",
+  "outcomeOneName": "Brett Johns",
+  "outcomeTwoName": "Tony Gravely",
   "outcomeVoidName": "NO_GAME",
-  "sportId": 5,
-  "sportLabel": "Soccer",
-  "startDate": 1560571914,
-  "teamOneName": "Brazil",
-  "teamTwoName": "Venezuela",
-  "title": "Soccer_Copa America,1560904200,Brazil,Venezuela,MONEY_LINE",
-  "type": "MONEY_LINE"
+  "teamOneName": "Brett Johns",
+  "teamTwoName": "Tony Gravely",
+  "type": "MONEY_LINE",
+  "gameTime": 1579991700,
+  "sportXeventId": "1083108429,1624",
+  "sportLabel": "Mixed Martial Arts",
+  "sportId": 7,
+  "leagueId": 34,
+  "homeTeamFirst": true,
+  "leagueLabel": "UFC",
+  "group1": "UFC"
 }
 ```
 
@@ -149,49 +142,47 @@ Example for a spread market:
 
 ```json
 {
-  "baseToken": "DAI",
-  "expiryDate": 1560904200,
-  "group1": "Copa America",
-  "homeTeamFirst": true,
-  "leagueId": 178,
-  "leagueLabel": "Copa America",
-  "line": -2,
-  "marketHash": "0x2e15327c0d79ea6129b5426160f789512aeabf9080f191613c517a2e404ba2b1",
-  "outcomeOneName": "Brazil -2",
-  "outcomeTwoName": "Venezuela +2",
-  "outcomeVoidName": "NO_GAME_OR_EVEN",
-  "sportId": 5,
-  "sportLabel": "Soccer",
-  "startDate": 1560571914,
-  "teamOneName": "Brazil",
-  "teamTwoName": "Venezuela",
-  "title": "Soccer_Copa America,1560904200,Brazil,Venezuela,SPREAD,-2",
-  "type": "SPREAD"
-}
+    "status": "ACTIVE",
+    "marketHash": "0x319af9631cd3b8950747daada600fbeebf222e1ee18dea7f10c78be23c353029",
+    "outcomeOneName": "M. Vondrousova -5",
+    "outcomeTwoName": "S. Kuznetsova +5",
+    "outcomeVoidName": "NO_GAME_OR_EVEN",
+    "teamOneName": "M. Vondrousova",
+    "teamTwoName": "S. Kuznetsova",
+    "type": "SPREAD_GAMES",
+    "gameTime": 1579586400,
+    "line": -5,
+    "sportXeventId": "669448,16242",
+    "sportLabel": "Tennis",
+    "sportId": 6,
+    "leagueId": 1025,
+    "homeTeamFirst": true,
+    "leagueLabel": "WTA Australian Open",
+    "group1": "WTA Australian Open"
+},
 ```
 
 Example for an over/under/total market:
 
 ```json
 {
-  "baseToken": "DAI",
-  "expiryDate": 1560904200,
-  "group1": "Copa America",
-  "homeTeamFirst": true,
-  "leagueId": 178,
-  "leagueLabel": "Copa America",
-  "line": 3,
-  "marketHash": "0xc987d6ab262e50b59bf00f0562415b2bf50cb8ebdab4785ac0774b901acb6e19",
-  "outcomeOneName": "Over 3",
-  "outcomeTwoName": "Under 3",
-  "outcomeVoidName": "NO_GAME_OR_EVEN",
-  "sportId": 5,
-  "sportLabel": "Soccer",
-  "startDate": 1560571914,
-  "teamOneName": "Brazil",
-  "teamTwoName": "Venezuela",
-  "title": "Soccer_Copa America,1560904200,Brazil,Venezuela,OVER_UNDER,3",
-  "type": "OVER_UNDER"
+    "status": "ACTIVE",
+    "marketHash": "0xa45de5dff4da161ef7c9170408f842c70f41a31800380d005a1a0a1e6abe67bb",
+    "outcomeOneName": "Over 3",
+    "outcomeTwoName": "Under 3",
+    "outcomeVoidName": "NO_GAME_OR_EVEN",
+    "teamOneName": "RKC Waalwijk",
+    "teamTwoName": "VVV Venlo",
+    "type": "OVER_UNDER_GOALS",
+    "gameTime": 1579977900,
+    "line": 3,
+    "sportXeventId": "1088774097,1928",
+    "sportLabel": "Soccer",
+    "sportId": 5,
+    "leagueId": 237,
+    "homeTeamFirst": true,
+    "leagueLabel": "Netherlands Eredivisie",
+    "group1": "Netherlands Eredivisie"
 }
 ```
 
@@ -241,7 +232,6 @@ interface ILeague {
   leagueId: number;
   label: string;
   sportId: number;
-  referenceUrl: string;
   homeTeamFirst: boolean;
 }
 ```
@@ -251,68 +241,29 @@ Example output:
 ```json
 [
   {
-    "leagueId": 10002,
-    "label": "F1 Race",
-    "sportId": 10,
-    "referenceUrl": "sportx.bet",
-    "homeTeamFirst": true
+      "leagueId": 1,
+      "label": "NBA",
+      "sportId": 1,
+      "homeTeamFirst": false
   },
   {
-    "leagueId": 10000,
-    "label": "League of Legends",
-    "sportId": 9,
-    "referenceUrl": "lol.com",
-    "homeTeamFirst": true
+      "leagueId": 2,
+      "label": "NCAA",
+      "sportId": 1,
+      "homeTeamFirst": false
   },
   {
-    "leagueId": 1,
-    "label": "NBA",
-    "sportId": 1,
-    "referenceUrl": "NBA.com",
-    "homeTeamFirst": false
+      "leagueId": 3,
+      "label": "NHL",
+      "sportId": 2,
+      "homeTeamFirst": false
   },
   {
-    "leagueId": 2,
-    "label": "NCAA",
-    "sportId": 1,
-    "referenceUrl": "NCAA.com",
-    "homeTeamFirst": false
+      "leagueId": 29,
+      "label": "English Premier League",
+      "sportId": 5,
+      "homeTeamFirst": true
   },
-  {
-    "leagueId": 3,
-    "label": "NHL",
-    "sportId": 2,
-    "referenceUrl": "NHL.com",
-    "homeTeamFirst": false
-  },
-  {
-    "leagueId": 4,
-    "label": "The Masters_Tournament",
-    "sportId": 4,
-    "referenceUrl": "masters.com",
-    "homeTeamFirst": true
-  },
-  {
-    "leagueId": 5,
-    "label": "The Masters_Round 1",
-    "sportId": 4,
-    "referenceUrl": "masters.com",
-    "homeTeamFirst": true
-  },
-  {
-    "leagueId": 6,
-    "label": "The Masters_Round 2",
-    "sportId": 4,
-    "referenceUrl": "masters.com",
-    "homeTeamFirst": true
-  },
-  {
-    "leagueId": 7,
-    "label": "The Masters_Round 3",
-    "sportId": 4,
-    "referenceUrl": "masters.com",
-    "homeTeamFirst": true
-  }
 ]
 ```
 
@@ -331,6 +282,7 @@ interface INewOrder {
   percentageOdds: string;
   expiry: number;
   isMakerBettingOutcomeOne: boolean;
+  baseToken: string;
 }
 ```
 
@@ -343,6 +295,8 @@ interface INewOrder {
 `expiry` is the expiry date of the order as a Unix timestamp. After this date, this order will be automatically removed and invalidated.
 
 `isMakerBettingOutcomeOne` is `true` or `false` depending on if you as the maker wish to bet on outcome one or outcome two. You can see what the outcomes are in the `IMarket` schema above.
+
+`baseToken` is the token you wish to make the order in.
 
 Some of these fields might have to be converted to a special format before submitting, but utilities are supplied for that.
 
@@ -366,6 +320,7 @@ const newOrder = {
     .add(1, "hour")
     .unix(),
   isMakerBettingOutcomeOne: true
+  baseToken: "0x44495672C86eEeE14adA9a3e453EEd68a338cdC1"
 };
 const response = await sportX.newOrder(newOrder);
 console.log(response);
@@ -416,9 +371,18 @@ If successful, the response will look like
 
 If it failed, it will throw an `APISchemaError` or `APIError` depending on the type of error (former would be validation and latter would be an error from the API).
 
+You can supply a second parameter if you wish to show a message to the user (if you are a user-facing application) as this is using `eth_signTypedData` behind the scenes. For example you could pass the string "Cancel orders":
+
+```typescript
+const response = await sportX.cancelOrder([
+  "0x066b9ce3e0b2e671695015db9cd772224120e03663e93d35ee447b86b2b49ef4"
+], "Cancel orders");
+console.log(response);
+```
+
 ### Get all orders on market(s)
 
-To get all the orders for market(s), simply call `getOrders([marketHashes])`
+To get all the orders for market(s), simply call `getOrders(marketHashes?: string[], maker?: string, baseToken?: string)`.
 
 Example:
 
@@ -437,13 +401,11 @@ Which produces:
     "fillAmount": "0",
     "orderHash": "0x4091e13e0e8f104f70bc5f147adebb5961adf85f869806f868cab37520e7cda6",
     "marketHash": "0x75f5d0544a38bf41afab5cfd0a2b40b8df32bd76d91bfa5ece47ba739b179e4d'",
+    "baseToken": "0x44495672C86eEeE14adA9a3e453EEd68a338cdC1",
     "maker": "0xaD90d89b23Fc80bCF70c3E8CC23a21ccADFBC95F",
     "totalBetSize": "150000000000000000000",
     "percentageOdds": "91485727650227679586",
     "expiry": 1560904200,
-    "relayerMakerFee": "0",
-    "relayerTakerFee": "0",
-    "relayer": "0xEBF9c090bb9E9cea54c1f5eC23c238aB42922289",
     "salt": "84548885320416437228828145919856326657411590956960346919167755421671785285427",
     "executor": "0xEBF9c090bb9E9cea54c1f5eC23c238aB42922289",
     "isMakerBettingOutcomeOne": true,
@@ -453,13 +415,11 @@ Which produces:
     "fillAmount": "0",
     "orderHash": "0x4b44c1c7f7f32ea42813c624e2bdef570333da214e617a1827445d78a594f259",
     "marketHash": "0x75f5d0544a38bf41afab5cfd0a2b40b8df32bd76d91bfa5ece47ba739b179e4d",
+    "baseToken" :"0x44495672C86eEeE14adA9a3e453EEd68a338cdC1",
     "maker": "0xaD90d89b23Fc80bCF70c3E8CC23a21ccADFBC95F",
     "totalBetSize": "75000000000000000000",
     "percentageOdds": "896417220308870961",
     "expiry": 1560904200,
-    "relayerMakerFee": "0",
-    "relayerTakerFee": "0",
-    "relayer": "0xEBF9c090bb9E9cea54c1f5eC23c238aB42922289",
     "salt": "62965102436418569939919982284939290277379355861365515708707721407487470531319",
     "executor": "0xEBF9c090bb9E9cea54c1f5eC23c238aB42922289",
     "isMakerBettingOutcomeOne": false,
@@ -487,6 +447,8 @@ which produces "150"
 
 `totalBetSize` is the total size of the order
 
+`baseToken` is the token this order is denominated in
+
 `percentageOdds` is the implied odds the maker is receiving for this order. To convert into a readable implied odds, you can use:
 
 ```typescript
@@ -505,12 +467,6 @@ which outputs 0.8898572765022768 (note that some rounding will occur)
 
 The below are for information purposes only and not needed to operate this API.
 
-`relayerMakerFee` is an additional trading fee charged by SportX on the maker, currently set to zero
-
-`relayerTakerFee` is an additional trading fee charged by SportX on the taker, currently set to zero
-
-`relayer` is the recipient of the above two fees.
-
 `salt` is a random number to differentiate between two otherwise identical orders
 
 `executor` is the address actually submitting the transaction to fill the order on the blockchain
@@ -519,7 +475,7 @@ The below are for information purposes only and not needed to operate this API.
 
 ### Get fill suggestions
 
-The API has a utility method to suggest to the orders with the best odds based on how much you want to fill. You can call `suggestOrders(marketHash, betSize, takerDirectionOutcomeOne, taker)` to receive the suggestions.
+The API has a utility method to suggest to the orders with the best odds based on how much you want to fill. You can call `suggestOrders(marketHash, betSize, takerDirectionOutcomeOne, taker, baseToken)` to receive the suggestions.
 
 Example:
 
@@ -528,7 +484,8 @@ const suggestions = await sportX.suggestOrders(
   "0xb3f686d972a91adecfd0d0b53a66fbbeffd4965a11519df6dbdc12d6ebc4b94e",
   "0x75BC4c86e7e096732a9a562dcc79a14D95784590",
   true,
-  "15000000000000000000"
+  "15000000000000000000",
+  "0x44495672C86eEeE14adA9a3e453EEd68a338cdC1"
 );
 ```
 
@@ -547,7 +504,7 @@ Typically, you would use these "suggestions" to actually fill an order. See the 
 
 ### Filling orders
 
-To actually fill orders on SportX, you will need the actual orders themselves which you can obtain from `getOrders(marketHash)` as well as the amount(s) you want to fill each order.
+To actually fill orders on SportX, you will need the actual orders themselves which you can obtain from `getOrders()` as well as the amount(s) you want to fill each order.
 
 *Note that to submit orders you will first have to approve the SportX contracts for trading. See "Approve SportX contracts for DAI trading"*
 
@@ -555,9 +512,9 @@ The orders are filled meta style, meaning that the filler does not pay for gas a
 
 The signature is
 
-`fillOrders(orders: IRelayerMakerOrder[], betAmounts: string[])`
+`fillOrders(orders: IRelayerMakerOrder[], betAmounts: string[], fillDetailsMetadata?: IFillDetailsMetadata, affiliateAddress?: string)`
 
-Alternatively, you can use the `suggestOrders(marketHash, betSize, takerDirectionOutcomeOne, taker)` method above to suggest to you the `orderHashes` with the best odds given your `betSize`.
+Alternatively, you can use the `suggestOrders(marketHash, betSize, takerDirectionOutcomeOne, taker, baseToken)` method above to suggest to you the `orderHashes` with the best odds given your `betSize`.
 
 _Note that you will still need to get the actual orders themselves from `getOrders(marketHash)`. You will need to find the orders in the `getOrders(marketHash)` response whose orderHashe(s) match up._
 
@@ -574,11 +531,9 @@ const orders = [
     maker: "0xE5F5cC7496b2B39F0a76442Bc8De0E7FEedc7e55"
     marketHash: "0x6fb98d18da6658435f7bdc645e30aa103882f3f5a814b6e64bf6829d5bb7af11"
     percentageOdds: "56827118644067796610"
-    relayer: "0xEBF9c090bb9E9cea54c1f5eC23c238aB42922289"
-    relayerMakerFee: "0"
-    relayerTakerFee: "0"
     salt: "109465971184042040832918255631084373861510812876584310918706085768814010131009"
     totalBetSize: "250000000000000000000"
+    baseToken: "0x44495672C86eEeE14adA9a3e453EEd68a338cdC1"
   }
 ];
 const fillAmounts = [
@@ -599,6 +554,23 @@ Which produces, if successful:
 
 This hash is a transaction hash for the actual ethereum transaction which you can track. Note that this might not be the final transaction! Depending on gas prices, the SportX relayer will retry to submit the bet until it is successful. However, at this point, the bet is confirmed.
 
+If you are an affiliate, you can pass your affiliate address as the last parameter `affiliateAddress` (after registering with SportX - please email [mailto](mailto:contact@sportx.bet) to register) to ensure you are paid out the affiliate fee when the bet is settled.
+
+Moreover, if you are a user facing application, similar to cancel order, you can pass an object with the format
+
+```typescript
+export interface IFillDetailsMetadata {
+  action: string;
+  market: string;
+  betting: string;
+  stake: string;
+  odds: string;
+  returning: string;
+}
+```
+
+as the second last parameter to show the user some information using `eth_signTypedData`. 
+
 ### Get all active orders for an account
 
 To get all the active (unfilled or partially filled) orders for an account, you can do the following:
@@ -611,7 +583,7 @@ const activeOrders = await sportX.getOrders(
 console.log(activeOrders);
 ```
 
-Which produces orders grouped by market hash as keys:
+Which produces:
 
 ```json
 [
@@ -623,11 +595,9 @@ Which produces orders grouped by market hash as keys:
     "totalBetSize": "75000000000000000000",
     "percentageOdds": "55152773438304856903",
     "expiry": 1560884400,
-    "relayerMakerFee": "0",
-    "relayerTakerFee": "0",
-    "relayer": "0xEBF9c090bb9E9cea54c1f5eC23c238aB42922289",
     "salt": "35485978637141361876232738522929776286192680166268767752859378082539513060903",
     "executor": "0xEBF9c090bb9E9cea54c1f5eC23c238aB42922289",
+    "baseToken": "0x44495672C86eEeE14adA9a3e453EEd68a338cdC1",
     "isMakerBettingOutcomeOne": false,
     "signature": "0xf2f0210f328eb04878496a6f970cc400672db524fd5650bf9ca42ce1774060082a040dc6e85bde539602babcb1e97d295f6a6078436d40bef1d4ac7319081ad81c"
   },
@@ -639,9 +609,7 @@ Which produces orders grouped by market hash as keys:
     "totalBetSize": "500000000000000000000",
     "percentageOdds": "36058315409643831747",
     "expiry": 1560884400,
-    "relayerMakerFee": "0",
-    "relayerTakerFee": "0",
-    "relayer": "0xEBF9c090bb9E9cea54c1f5eC23c238aB42922289",
+    "baseToken": "0x44495672C86eEeE14adA9a3e453EEd68a338cdC1",
     "salt": "78496959933119259419935033215094016205058812453361105019042873506621461421155",
     "executor": "0xEBF9c090bb9E9cea54c1f5eC23c238aB42922289",
     "isMakerBettingOutcomeOne": true,
@@ -686,40 +654,6 @@ Which produces the details of the bets like so:
 ]
 ```
 
-### Subscribe to a game and get updates when any of the underlying markets (spread, money line, over under) change
-
-You can subscribe to a game and get full order book updates when any of the underlying markets' order books change. Unfortunately we do not currently support subscribing to a single game - this is coming soon.
-
-To get a game ID, you can use the utility method `getCompactGameId(market: IMarket)` with markets from `sportX.getActiveMarkets()` to get the game ID. Then you can call `sportX.subscribeGameOrderBook(compactGameId)`
-
-Example:
-
-```typescript
-await sportX.subscribeGameOrderBook("1,2,1573844400,Howard,Robert Morris");
-```
-
-If it failed, it will throw an `APISchemaError` or `APIError` depending on the type of error (former would be validation and latter would be an error from the API).
-
-You can now listen to the `game_order_book` event emitted by the sportX object:
-
-```typescript
-sportX.on("game_order_book", data => console.log(data));
-```
-
-`data` in above will be in the same format as the results in the "Get all orders on market(s)" section but grouped by `compactGameId`
-
-You can subscribe to multiple games by just calling `sportX.subscribeGameOrderBook(gameId)` multiple times. _Note that if you subscribe to multiple games, you will have to search for the `marketHash` in the resulting order arrays to determine which market the updates are for._
-
-To unsubscribe, you'll need to do the following:
-
-```typescript
-await sportX.unsubscribeGameOrderBook("1,2,1573844400,Howard,Robert Morris");
-```
-
-If it failed, it will throw an `APISchemaError` or `APIError` depending on the type of error (former would be validation and latter would be an error from the API).
-
-Now you will no longer get `game_order_book` events containing the market hashes under that particular `compactGameId`. But you still might get updates for other games you have subscribed to.
-
 ### Subscribe to an address and get updates when that addresses' bookmaker orders change
 
 You can subscribe to an account and get updates when that account's active orders change (filled, cancelled, etc).
@@ -755,7 +689,21 @@ await sportX.unsubscribeActiveOrders(
 If it failed, it will throw an `APISchemaError` or `APIError` depending on the type of error (former would be validation and latter would be an error from the API).
 
 ### Get past trades (graded/settled and ungraded/unsettled)
-You can get past trades for your account (regardless if you were the maker or taker in the trade), as well as query for trades that are still pending or unsettled using `getTrades(startDate, endDate, settled)`
+You can get past trades for your account (regardless if you were the maker or taker in the trade), as well as query for trades that are still pending or unsettled using `getTrades(tradeRequest: IGetTradesRequest)`
+
+where the payload looks like:
+
+```typescript
+export interface IGetTradesRequest {
+  startDate?: number;
+  endDate?: number;
+  bettor?: string;
+  settled?: boolean;
+  marketHashes?: string[];
+  baseToken?: string;
+  maker?: boolean;
+}
+```
 
 Example (getting unsettled trades):
 
@@ -763,6 +711,10 @@ Example (getting unsettled trades):
 const unsettledTrades = await sportX.getTrades(
   1575912953,
   1576008230,
+  false,
+  false,
+  ["0x79dc0ebbfd89de79f5ee0f1e495480fbea3efb341e3087b2852915c0d5c0d450"],
+  "0xa6dd914D83Fb3826f4881009D8537FE8f85D7c23",
   false
 );
 console.log(unsettledTrades);
@@ -770,36 +722,40 @@ console.log(unsettledTrades);
 
 `startDate` is in unix seconds. If present, all trades will be after this time
 `endDate` is in unix seconds. If present, all trades will be before this time.
+`bettor` is one of the bettors in the trade. Note that a full trade between two parties is split into two objects.
 `settled` is true or false. You can search for only unsettled trades or settled trades using this.
+`marketHashes` allows you to filter by certain markets only
+`baseToken` allows you to filter by certain tokens only
+`maker` allows you to sort by trades where the bettor is the maker only, or the taker only. 
 
 Which produces unsettled trades like so:
 
 ```json
 [
-   {
-      "maker": "0xE5F5cC7496b2B39F0a76442Bc8De0E7FEedc7e55",
-      "taker": "0xe087299AE9Acd0133d6D1544A97Bb0EEe24a2671",
-      "takerAmount": "50000000000000000000",
-      "takerEscrow": "17882942028012272361",
-      "orderHash": "0x2bd0af47abb9631c13e7e25d296dde828245d7cd1e515e47a96e3bb9e753e8f9",
-      "percentageOdds": "73656206561240705812",
-      "marketHash": "0x79dc0ebbfd89de79f5ee0f1e495480fbea3efb341e3087b2852915c0d5c0d450",
-      "isMakerBettingOutcomeOne": false,
-      "betTime": 1576008231,
-      "settled": false
-   },
-   {
-      "maker": "0xaD90d89b23Fc80bCF70c3E8CC23a21ccADFBC95F",
-      "taker": "0xe087299AE9Acd0133d6D1544A97Bb0EEe24a2671",
-      "takerAmount": "5868866863720475764",
-      "takerEscrow": "2117057971987727638",
-      "orderHash": "0xda6d82e07179328cc3803122c856bbe1bba8b0b8f5fc920c5aea848cf33f26c7",
-      "percentageOdds": "73490134010258514214",
-      "marketHash": "0x79dc0ebbfd89de79f5ee0f1e495480fbea3efb341e3087b2852915c0d5c0d450",
-      "isMakerBettingOutcomeOne": false,
-      "betTime": 1576008231,
-      "settled": false
-   }
+  {
+    "baseToken": "0x44495672C86eEeE14adA9a3e453EEd68a338cdC1",
+    "bettor": "0xaD90d89b23Fc80bCF70c3E8CC23a21ccADFBC95F",
+    "stake": "46176499173875012149",
+    "odds": "82198961937716262976",
+    "orderHash": "0xe41ecf31600664ccb02fca45205960512f9858772bb40383db29efeeea451555",
+    "marketHash": "0x17a16c619f6668d55c83369c3ad1efa95dc8c24a06a004fb09b128e23e5b2aeb",
+    "maker": true,
+    "betTime": 1579194269,
+    "settled": true,
+    "bettingOutcomeOne": false
+  },
+  {
+    "baseToken": "0x44495672C86eEeE14adA9a3e453EEd68a338cdC1",
+    "bettor": "0x89181a0E0a9de0B5B21033e5b5A1dEBFcf097065",
+    "stake": "9999999999999999999",
+    "odds": "17801038062283737024",
+    "orderHash": "0xe41ecf31600664ccb02fca45205960512f9858772bb40383db29efeeea451555",
+    "marketHash": "0x17a16c619f6668d55c83369c3ad1efa95dc8c24a06a004fb09b128e23e5b2aeb",
+    "maker": false,
+    "betTime": 1579194269,
+    "settled": false,
+    "bettingOutcomeOne": true
+  },
 ]
 ```
 
