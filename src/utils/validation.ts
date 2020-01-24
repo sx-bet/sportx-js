@@ -9,7 +9,8 @@ import { IFillDetailsMetadata } from "../types/internal";
 import {
   IGetTradesRequest,
   INewOrder,
-  IRelayerMakerOrder
+  IRelayerMakerOrder,
+  ISignedRelayerMakerOrder
 } from "../types/relayer";
 import { convertToAPIPercentageOdds } from "./convert";
 
@@ -133,6 +134,20 @@ export function validateIRelayerMakerOrder(order: IRelayerMakerOrder) {
   }
   if (!isBoolean(isMakerBettingOutcomeOne)) {
     return "isMakingBettingOutcomeOne undefined or malformed.";
+  }
+  return "OK";
+}
+
+export function validateISignedRelayerMakerOrder(
+  order: ISignedRelayerMakerOrder
+) {
+  const baseValidation = validateIRelayerMakerOrder(order);
+  if (baseValidation !== "OK") {
+    return baseValidation;
+  }
+  const { signature } = order;
+  if (!isHexString(signature)) {
+    return "signature is not a valid hex string.";
   }
   return "OK";
 }

@@ -30,6 +30,7 @@ import {
 } from "./types/internal";
 import {
   IDetailedRelayerMakerOrder,
+  IGetTradesRequest,
   ILeague,
   IMarket,
   IMetadata,
@@ -42,8 +43,7 @@ import {
   IRelayerResponse,
   ISignedRelayerMakerOrder,
   ISport,
-  ITrade,
-  IGetTradesRequest
+  ITrade
 } from "./types/relayer";
 import { convertToContractOrder } from "./utils/convert";
 import { tryParseJson } from "./utils/misc";
@@ -60,7 +60,7 @@ import {
   validateIFillDetailsMetadata,
   validateIGetTradesRequest,
   validateINewOrderSchema,
-  validateIRelayerMakerOrder
+  validateISignedRelayerMakerOrder
 } from "./utils/validation";
 
 export interface ISportX extends EventEmitter {
@@ -74,7 +74,10 @@ export interface ISportX extends EventEmitter {
     orderHashes: string[],
     message?: string
   ): Promise<IRelayerResponse>;
-  getRecentPendingBets(address: string, baseToken: string): Promise<IPendingBet[]>;
+  getRecentPendingBets(
+    address: string,
+    baseToken: string
+  ): Promise<IPendingBet[]>;
   getOrders(
     marketHashes?: string[],
     maker?: string,
@@ -93,9 +96,7 @@ export interface ISportX extends EventEmitter {
     taker: string,
     baseToken: string
   ): Promise<IRelayerResponse>;
-  getTrades(
-    tradeRequest: IGetTradesRequest
-  ): Promise<ITrade[]>;
+  getTrades(tradeRequest: IGetTradesRequest): Promise<ITrade[]>;
   approveSportXContractsDai(): Promise<IRelayerResponse>;
   subscribeGameOrderBook(compactGameId: string): Promise<void>;
   unsubscribeGameOrderBook(compactGameId: string): Promise<void>;
@@ -271,7 +272,9 @@ class SportX extends EventEmitter implements ISportX {
     }
     this.debug("Relayer response");
     this.debug(result);
-    const { data: {markets} } = result;
+    const {
+      data: { markets }
+    } = result;
     return markets as IMarket[];
   }
 
@@ -401,7 +404,7 @@ class SportX extends EventEmitter implements ISportX {
   ): Promise<IRelayerResponse> {
     this.debug("fillOrders");
     orders.forEach(order => {
-      const validation = validateIRelayerMakerOrder(order);
+      const validation = validateISignedRelayerMakerOrder(order);
       if (validation !== "OK") {
         this.debug("One of the orders is malformed");
         throw new APISchemaError(validation);
@@ -579,13 +582,9 @@ class SportX extends EventEmitter implements ISportX {
     return pendingBets;
   }
 
-  public async getTrades(
-    tradeRequest: IGetTradesRequest
-  ): Promise<ITrade[]> {
+  public async getTrades(tradeRequest: IGetTradesRequest): Promise<ITrade[]> {
     this.debug("getTrades");
-    const validation = validateIGetTradesRequest(
-      tradeRequest
-    );
+    const validation = validateIGetTradesRequest(tradeRequest);
     if (validation !== "OK") {
       throw new APISchemaError(validation);
     }
