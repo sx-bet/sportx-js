@@ -571,6 +571,24 @@ export interface IFillDetailsMetadata {
 
 as the second last parameter to show the user some information using `eth_signTypedData`. 
 
+#### Errors
+Here are the possible errors that can be returned from the endpoint with status code 400 and their meanings:
+
+-  `[]_UNDEFINED_OR_MALFORMED` - a field is missing. Check the payload and ensure all the names are correct.
+-  `ORDERS_NOT_UNIQUE` - Ensure that the order hashes of the orders passed are unique. If you want to fill the same order multiple times, increase the amount instead
+-  `INCORRECT_ARRAY_LENGTHS` - The length of the `orders` array is not the same as the `betAmounts` array. Ensure they are the same.
+-  `ORDERS_DONT_EXIST` - The orders you are trying to fill do not exist.
+-  `TOO_CLOSE_TO_ORDER_EXPIRY` - The order is too close to its expiry. The API prevents filling orders too close to their expiry due to the time it takes to mine a block on Ethereum
+-  `TAKER_AMOUNT_TOO_LOW` - One of the bet amounts in `betAmounts` is too low. Ensure that it meets the minimum as specified in the `getMetadata()` endpoint.
+-  `BASE_TOKENS_NOT_SAME` - The base tokens of the orders are not the same. Ensure they are the same. 
+-  `MARKETS_NOT_SAME` - The markets of the orders are not the same. Ensure they are the same.
+-  `DIRECTIONS_NOT_SAME` - The directions of the orders are not the same. Ensure they are the same.
+-  `META_TX_RATE_LIMIT_REACHED` - There is a maximum of 3 orders that can be submitted at once for each `taker` to prevent spam.
+-  `INSUFFICIENT_SPACE` - One of the orders you are trying to fill has insufficient space. i.e., the bet amount is too high for this particular order.
+-  `FILL_ALREADY_SUBMITTED` - This exact fill has already been submitted. Perhaps you have called the endpoint twice with identical parameters.
+-  `BAD_AFFILIATE` - The affiliate passed is not registered with SportX. Message `contact@sportx.bet` to get registered.
+
+
 ### Get all active orders for an account
 
 To get all the active (unfilled or partially filled) orders for an account, you can do the following:
