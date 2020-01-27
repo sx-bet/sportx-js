@@ -512,7 +512,7 @@ The orders are filled meta style, meaning that the filler does not pay for gas a
 
 The signature is
 
-`fillOrders(orders: IRelayerMakerOrder[], betAmounts: string[], fillDetailsMetadata?: IFillDetailsMetadata, affiliateAddress?: string)`
+`fillOrders(orders: ISignedRelayerMakerOrder[], betAmounts: string[], fillDetailsMetadata?: IFillDetailsMetadata, affiliateAddress?: string)`
 
 Alternatively, you can use the `suggestOrders(marketHash, betSize, takerDirectionOutcomeOne, taker, baseToken)` method above to suggest to you the `orderHashes` with the best odds given your `betSize`.
 
@@ -534,6 +534,7 @@ const orders = [
     salt: "109465971184042040832918255631084373861510812876584310918706085768814010131009"
     totalBetSize: "250000000000000000000"
     baseToken: "0x44495672C86eEeE14adA9a3e453EEd68a338cdC1"
+    signature: "0x413dda285693ecac431b8346b41c4aa618a703e489b6aa93215ccdf83e4a03326da1099a07b14c3d513c16f7a94297c1b59ab18d3350d6551410d18043d965101b"
   }
 ];
 const fillAmounts = [
