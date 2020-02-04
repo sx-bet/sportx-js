@@ -181,20 +181,10 @@ class SportX extends EventEmitter implements ISportX {
     const response = await fetch(
       `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.METADATA}`
     );
-    const textResponse = await response.text();
-    if (response.status !== 200) {
-      this.debug(response.status);
-      this.debug(response.statusText);
-      throw new APIError(
-        `Can't fetch metadata. Response code: ${
-          response.status
-        }. Result: ${textResponse}`
-      );
-    }
-    const { result, valid } = tryParseJson(textResponse);
-    if (!valid) {
-      throw new APIError(`Can't parse JSON ${textResponse}`);
-    }
+    const result = await this.tryParseResponse(
+      response,
+      "Can't fetch metadata"
+    );
     this.debug("Relayer response");
     this.debug(result);
     const { data } = result;
@@ -206,20 +196,7 @@ class SportX extends EventEmitter implements ISportX {
     const response = await fetch(
       `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.LEAGUES}`
     );
-    const textResponse = await response.text();
-    if (response.status !== 200) {
-      this.debug(response.status);
-      this.debug(response.statusText);
-      throw new APIError(
-        `Can't fetch leagues. Response code: ${
-          response.status
-        }. Result: ${textResponse}`
-      );
-    }
-    const { result, valid } = tryParseJson(textResponse);
-    if (!valid) {
-      throw new APIError(`Can't parse JSON ${textResponse}`);
-    }
+    const result = await this.tryParseResponse(response, "Can't fetch leagues");
     this.debug("Relayer response");
     this.debug(result);
     const { data } = result;
@@ -231,22 +208,7 @@ class SportX extends EventEmitter implements ISportX {
     const response = await fetch(
       `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.SPORTS}`
     );
-    const textResponse = await response.text();
-    if (response.status !== 200) {
-      this.debug(response.status);
-      this.debug(response.statusText);
-      throw new APIError(
-        `Can't fetch sports. Response code: ${
-          response.status
-        }. Result: ${textResponse}`
-      );
-    }
-    const { result, valid } = tryParseJson(textResponse);
-    if (!valid) {
-      throw new APIError(`Can't parse JSON ${textResponse}`);
-    }
-    this.debug("Relayer response");
-    this.debug(result);
+    const result = await this.tryParseResponse(response, "Can't fetch sports");
     const { data } = result;
     return data as ISport[];
   }
@@ -256,20 +218,10 @@ class SportX extends EventEmitter implements ISportX {
     const response = await fetch(
       `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.ACTIVE_MARKETS}`
     );
-    const textResponse = await response.text();
-    if (response.status !== 200) {
-      this.debug(response.status);
-      this.debug(response.statusText);
-      throw new APIError(
-        `Can't fetch active markets. Response code: ${
-          response.status
-        }. Result: ${textResponse}`
-      );
-    }
-    const { result, valid } = tryParseJson(textResponse);
-    if (!valid) {
-      throw new APIError(`Can't parse JSON ${textResponse}`);
-    }
+    const result = await this.tryParseResponse(
+      response,
+      "Can't fetch active markets"
+    );
     this.debug("Relayer response");
     this.debug(result);
     const {
@@ -318,20 +270,10 @@ class SportX extends EventEmitter implements ISportX {
         headers: { "Content-Type": "application/json" }
       }
     );
-    const textResponse = await response.text();
-    if (response.status !== 200) {
-      this.debug(response.status);
-      this.debug(response.statusText);
-      throw new APIError(
-        `Can't fetch metadata. Response code: ${
-          response.status
-        }. Result: ${textResponse}`
-      );
-    }
-    const { result, valid } = tryParseJson(textResponse);
-    if (!valid) {
-      throw new APIError(`Can't parse JSON ${textResponse}`);
-    }
+    const result = await this.tryParseResponse(
+      response,
+      "Can't submit new order"
+    );
     this.debug("Relayer response");
     this.debug(result);
     return result as IRelayerResponse;
@@ -377,20 +319,10 @@ class SportX extends EventEmitter implements ISportX {
         headers: { "Content-Type": "application/json" }
       }
     );
-    const textResponse = await response.text();
-    if (response.status !== 200) {
-      this.debug(response.status);
-      this.debug(response.statusText);
-      throw new APIError(
-        `Can't get suggested orders. Response code: ${
-          response.status
-        }. Result: ${textResponse}`
-      );
-    }
-    const { result, valid } = tryParseJson(textResponse);
-    if (!valid) {
-      throw new APIError(`Can't parse JSON ${textResponse}`);
-    }
+    const result = await this.tryParseResponse(
+      response,
+      "Can't get suggested orders"
+    );
     this.debug("Relayer response");
     this.debug(result);
     return result as IRelayerResponse;
@@ -472,20 +404,7 @@ class SportX extends EventEmitter implements ISportX {
         headers: { "Content-Type": "application/json" }
       }
     );
-    const textResponse = await response.text();
-    if (response.status !== 200) {
-      this.debug(response.status);
-      this.debug(response.statusText);
-      throw new APIError(
-        `Can't fill orders. Response code: ${
-          response.status
-        }. Result: ${textResponse}`
-      );
-    }
-    const { result, valid } = tryParseJson(textResponse);
-    if (!valid) {
-      throw new APIError(`Can't parse JSON ${textResponse}`);
-    }
+    const result = await this.tryParseResponse(response, "Can't fill orders.");
     this.debug("Relayer response");
     this.debug(result);
     return result as IRelayerResponse;
@@ -526,20 +445,10 @@ class SportX extends EventEmitter implements ISportX {
         headers: { "Content-Type": "application/json" }
       }
     );
-    const textResponse = await response.text();
-    if (response.status !== 200) {
-      this.debug(response.status);
-      this.debug(response.statusText);
-      throw new APIError(
-        `Can't cancel orders. Response code: ${
-          response.status
-        }. Result: ${textResponse}`
-      );
-    }
-    const { result, valid } = tryParseJson(textResponse);
-    if (!valid) {
-      throw new APIError(`Can't parse JSON ${textResponse}`);
-    }
+    const result = await this.tryParseResponse(
+      response,
+      "Can't cancel orders."
+    );
     this.debug("Relayer response");
     this.debug(result);
     return result as IRelayerResponse;
@@ -561,20 +470,10 @@ class SportX extends EventEmitter implements ISportX {
     const response = await fetch(
       `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.PENDING_BETS}?${qsPayload}`
     );
-    const textResponse = await response.text();
-    if (response.status !== 200) {
-      this.debug(response.status);
-      this.debug(response.statusText);
-      throw new APIError(
-        `Can't fetch metadata. Response code: ${
-          response.status
-        }. Result: ${textResponse}`
-      );
-    }
-    const { result, valid } = tryParseJson(textResponse);
-    if (!valid) {
-      throw new APIError(`Can't parse JSON ${textResponse}`);
-    }
+    const result = await this.tryParseResponse(
+      response,
+      "Can't get recent pending bets"
+    );
     this.debug("Relayer response");
     this.debug(result);
     const { data } = result;
@@ -596,20 +495,7 @@ class SportX extends EventEmitter implements ISportX {
         headers: { "Content-Type": "application/json" }
       }
     );
-    const textResponse = await response.text();
-    if (response.status !== 200) {
-      this.debug(response.status);
-      this.debug(response.statusText);
-      throw new APIError(
-        `Can't get orders. Response code: ${
-          response.status
-        }. Result: ${textResponse}`
-      );
-    }
-    const { result, valid } = tryParseJson(textResponse);
-    if (!valid) {
-      throw new APIError(`Can't parse JSON ${textResponse}`);
-    }
+    const result = await this.tryParseResponse(response, "Can't get trades");
     this.debug("Relayer response");
     this.debug(result);
     const {
@@ -651,20 +537,7 @@ class SportX extends EventEmitter implements ISportX {
         }
       }
     );
-    const textResponse = await response.text();
-    if (response.status !== 200) {
-      this.debug(response.status);
-      this.debug(response.statusText);
-      throw new APIError(
-        `Can't get orders. Response code: ${
-          response.status
-        }. Result: ${textResponse}`
-      );
-    }
-    const { result, valid } = tryParseJson(textResponse);
-    if (!valid) {
-      throw new APIError(`Can't parse JSON ${textResponse}`);
-    }
+    const result = await this.tryParseResponse(response, "Can't get orders");
     this.debug("Relayer response");
     this.debug(result);
     const { data } = result;
@@ -736,20 +609,11 @@ class SportX extends EventEmitter implements ISportX {
         }
       }
     );
-    const textResponse = await response.text();
-    if (response.status !== 200) {
-      this.debug(response.status);
-      this.debug(response.statusText);
-      throw new APIError(
-        `Can't approve SportX contracts. Response code: ${
-          response.status
-        }. Result: ${textResponse}`
-      );
-    }
-    const { result, valid } = tryParseJson(textResponse);
-    if (!valid) {
-      throw new APIError(`Can't parse JSON ${textResponse}`);
-    }
+    const result = await this.tryParseResponse(
+      response,
+      "Can't approx SportX contracts"
+    );
+
     this.debug("Relayer response");
     this.debug(result);
     return result as IRelayerResponse;
@@ -779,6 +643,23 @@ class SportX extends EventEmitter implements ISportX {
         payload
       ]);
       return signature;
+    }
+  }
+
+  private async tryParseResponse(response: Response, errorMessage: string) {
+    const textResponse = await response.text();
+    const { result, valid } = tryParseJson(textResponse);
+    if (valid && response.status !== 200) {
+      this.debug(response.status);
+      this.debug(response.statusText);
+      throw new APIError(
+        result,
+        `${errorMessage}. Response code: ${response.status}`
+      );
+    } else if (!valid) {
+      throw new APIError(undefined, `Can't parse JSON ${textResponse}`);
+    } else {
+      return result;
     }
   }
 

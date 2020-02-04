@@ -3,7 +3,7 @@ import { Wallet } from "ethers";
 import { parseUnits } from "ethers/utils";
 import "mocha";
 import moment from "moment";
-import { IMetadata, INewOrder } from "../src";
+import { INewOrder } from "../src";
 import { Environments, TOKEN_ADDRESSES, Tokens } from "../src/constants";
 import { ISportX, newSportX } from "../src/sportx";
 import {
