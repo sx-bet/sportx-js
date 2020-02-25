@@ -2,12 +2,18 @@ import * as ably from "ably";
 import fetch from "cross-fetch";
 import debug from "debug";
 import ethSigUtil from "eth-sig-util";
-import { providers, Signer, Wallet } from "ethers";
+import { Contract, providers, Signer, Wallet } from "ethers";
 import { JsonRpcProvider, Web3Provider } from "ethers/providers";
-import { bigNumberify, isHexString, randomBytes } from "ethers/utils";
+import {
+  BigNumber,
+  bigNumberify,
+  isHexString,
+  randomBytes
+} from "ethers/utils";
 import { EventEmitter } from "events";
 import queryString from "query-string";
 import { isArray, isBoolean } from "util";
+import daiArtifact from "./artifacts/DAI.json";
 import {
   CHANNEL_BASE_KEYS,
   EIP712_FILL_HASHER_ADDRESSES,
@@ -120,6 +126,7 @@ class SportX extends EventEmitter implements ISportX {
   private environment: Environments;
   private privateKey!: string;
   private chainId!: number;
+  private daiWrapper: Contract;
 
   constructor(
     env: Environments,
@@ -153,6 +160,11 @@ class SportX extends EventEmitter implements ISportX {
       throw new Error(`Invalid environment: ${env}`);
     }
     this.environment = env;
+    this.daiWrapper = new Contract(
+      TOKEN_ADDRESSES[Tokens.DAI][this.environment],
+      daiArtifact.abi,
+      this.provider
+    );
   }
 
   public async init() {
@@ -582,10 +594,11 @@ class SportX extends EventEmitter implements ISportX {
   public async approveSportXContractsDai() {
     const { chainId } = await this.provider.getNetwork();
     const walletAddress = await this.signingWallet.getAddress();
+    const nonce: BigNumber = await this.daiWrapper.nonces(walletAddress);
     const details: IPermit = {
       holder: walletAddress,
       spender: TOKEN_TRANSFER_PROXY_ADDRESS[this.environment],
-      nonce: 0,
+      nonce: nonce.toNumber(),
       expiry: 0,
       allowed: true
     };
