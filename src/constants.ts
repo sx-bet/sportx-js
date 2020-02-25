@@ -21,7 +21,7 @@ export enum Tokens {
 
 export const TOKEN_TRANSFER_PROXY_ADDRESS = {
   [Environments.RINKEBY]: "0x04CEB6182EDC5dEdedfa84EA6F112f01f1195830",
-  [Environments.PRODUCTION]: "0x95B90DbA0516FD2aa991A2F4afa7817546ffB06d"
+  [Environments.PRODUCTION]: "0x60E8AA8a997da2c58Bc9894aAa08a28524e63bb5"
 }
 
 export const TOKEN_ADDRESSES = {
