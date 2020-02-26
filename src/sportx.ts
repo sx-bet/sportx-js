@@ -592,7 +592,6 @@ class SportX extends EventEmitter implements ISportX {
   }
 
   public async approveSportXContractsDai() {
-    const { chainId } = await this.provider.getNetwork();
     const walletAddress = await this.signingWallet.getAddress();
     const nonce: BigNumber = await this.daiWrapper.nonces(walletAddress);
     const details: IPermit = {
@@ -604,7 +603,7 @@ class SportX extends EventEmitter implements ISportX {
     };
     const signPayload = getDaiPermitEIP712Payload(
       details,
-      chainId,
+      this.chainId,
       TOKEN_ADDRESSES[Tokens.DAI][this.environment]
     );
     const signature = await this.getEip712Signature(signPayload);
