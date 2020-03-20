@@ -148,15 +148,11 @@ describe("sportx", () => {
     expect(fill.status).to.equal("success");
   });
 
-  it("should subscribe to an account", async () => {
-    const address = await wallet.getAddress();
-    await sportX.subscribeActiveOrders(address);
-  });
-
-  it("should unsubscribe from an account", async () => {
-    const address = await wallet.getAddress();
-    await sportX.unsubscribeActiveOrders(address);
-  });
+  it("should get connected realtime connection", async () => {
+    const connection = sportX.getRealtimeConnection()
+    const channel = connection.channels.get("live_scores")
+    expect(channel).not.undefined
+  })
 
   it("should meta approve DAI", async () => {
     await sportX.approveSportXContractsDai();

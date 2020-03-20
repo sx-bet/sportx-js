@@ -15,7 +15,6 @@ import queryString from "query-string";
 import { isArray, isBoolean } from "util";
 import daiArtifact from "./artifacts/DAI.json";
 import {
-  CHANNEL_BASE_KEYS,
   EIP712_FILL_HASHER_ADDRESSES,
   Environments,
   PRODUCTION_RELAYER_URL,
@@ -104,14 +103,7 @@ export interface ISportX extends EventEmitter {
   ): Promise<IRelayerResponse>;
   getTrades(tradeRequest: IGetTradesRequest): Promise<ITrade[]>;
   approveSportXContractsDai(): Promise<IRelayerResponse>;
-  subscribeGameOrderBook(compactGameId: string): Promise<void>;
-  unsubscribeGameOrderBook(compactGameId: string): Promise<void>;
-  subscribeActiveOrders(maker: string): Promise<void>;
-  unsubscribeActiveOrders(maker: string): Promise<void>;
-}
-
-interface IChannels {
-  [channelName: string]: ably.Types.RealtimeChannelPromise;
+  getRealtimeConnection(): ably.Types.RealtimePromise;
 }
 
 class SportX extends EventEmitter implements ISportX {
@@ -122,7 +114,6 @@ class SportX extends EventEmitter implements ISportX {
   private debug = debug("sportx-js");
   private metadata!: IMetadata;
   private ably!: ably.Types.RealtimePromise;
-  private ablyChannels!: IChannels;
   private environment: Environments;
   private privateKey!: string;
   private chainId!: number;
@@ -166,6 +157,9 @@ class SportX extends EventEmitter implements ISportX {
       this.provider
     );
   }
+  public getRealtimeConnection(): ably.Types.RealtimePromise {
+    return this.ably;
+  }
 
   public async init() {
     if (this.initialized) {
@@ -184,7 +178,6 @@ class SportX extends EventEmitter implements ISportX {
     const network = await this.provider.getNetwork();
     this.chainId = network.chainId;
     this.initialized = true;
-    this.ablyChannels = {};
     this.debug("Initialized");
   }
 
@@ -557,40 +550,6 @@ class SportX extends EventEmitter implements ISportX {
     return orders;
   }
 
-  public async subscribeGameOrderBook(compactGameId: string) {
-    if (typeof compactGameId !== "string") {
-      throw new APISchemaError(`${compactGameId} is not a valid game ID`);
-    }
-    await this.subscribeAblyChannel(
-      CHANNEL_BASE_KEYS.GAME_ORDER_BOOK,
-      compactGameId
-    );
-  }
-
-  public async unsubscribeGameOrderBook(compactGameId: string) {
-    if (typeof compactGameId !== "string") {
-      throw new APISchemaError(`${compactGameId} is not a valid game ID`);
-    }
-    await this.unsubscribeAblyChannel(
-      CHANNEL_BASE_KEYS.GAME_ORDER_BOOK,
-      compactGameId
-    );
-  }
-
-  public async subscribeActiveOrders(maker: string) {
-    if (!isAddress(maker)) {
-      throw new APISchemaError(`${maker} is not a valid address`);
-    }
-    await this.subscribeAblyChannel(CHANNEL_BASE_KEYS.ACTIVE_ORDERS, maker);
-  }
-
-  public async unsubscribeActiveOrders(maker: string) {
-    if (!isAddress(maker)) {
-      throw new APISchemaError(`${maker} is not a valid address`);
-    }
-    await this.unsubscribeAblyChannel(CHANNEL_BASE_KEYS.ACTIVE_ORDERS, maker);
-  }
-
   public async approveSportXContractsDai() {
     const walletAddress = await this.signingWallet.getAddress();
     const nonce: BigNumber = await this.daiWrapper.nonces(walletAddress);
@@ -673,31 +632,6 @@ class SportX extends EventEmitter implements ISportX {
     } else {
       return result;
     }
-  }
-
-  private async subscribeAblyChannel(baseChannel: string, subChannel: string) {
-    const channelName = `${baseChannel}:${subChannel}`;
-    if (this.ablyChannels[channelName]) {
-      throw new APIError(`Already subscribed to ${channelName}`);
-    }
-    const channel = this.ably.channels.get(channelName);
-    await channel.subscribe(message => {
-      this.emit(message.name, message.data);
-    });
-    this.ablyChannels[channelName] = channel;
-  }
-
-  private async unsubscribeAblyChannel(
-    baseChannel: string,
-    subChannel: string
-  ) {
-    const channelName = `${baseChannel}:${subChannel}`;
-    const channel = this.ablyChannels[channelName];
-    if (!channel) {
-      throw new APIError(`Not subscribed to ${channelName}`);
-    }
-    await channel.detach();
-    delete this.ablyChannels[channelName];
   }
 }
 

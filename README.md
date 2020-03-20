@@ -28,9 +28,12 @@ You can do the following things with this API:
 8. Fill order(s)
 9. Get all active orders for an account
 10. Get pending bets for a user
-11. Subscribe to an address and get updates when that addresses' bookmaker orders change
-12. Get past trades (graded/settled and ungraded/unsettled)
-13. Approve SportX contracts for DAI trading
+11. Get past trades (graded/settled and ungraded/unsettled)
+12. Approve SportX contracts for DAI trading
+13. Subscribe to market changes
+14. Subscribe to live scores by game
+15. Subscribe to order book changes by market
+16. Subscribe to active orders 
 
 We support betting in DAI or WETH.
 
@@ -673,40 +676,6 @@ Which produces the details of the bets like so:
 ]
 ```
 
-### Subscribe to an address and get updates when that addresses' bookmaker orders change
-
-You can subscribe to an account and get updates when that account's active orders change (filled, cancelled, etc).
-
-Example:
-
-```typescript
-await sportX.subscribeActiveOrders(
-  "0xF59E93290383ED15F73Ee923EbbF29f79e37B6d8"
-);
-```
-
-If it failed, it will throw an `APISchemaError` or `APIError` depending on the type of error (former would be validation and latter would be an error from the API).
-
-You can now listen to the `active_orders` event emitted by the sportX object:
-
-```typescript
-sportX.on("active_orders", data => console.log(data));
-```
-
-`data` in above will be in the same format as the results in the "Get all active orders for an account" section
-
-You can subscribe to multiple accounts by just calling `sportX.subscribeActiveOrders(address)` multiple times. _Note that if you subscribe to multiple accounts, you will have to search for the `maker` in the resulting arrays to determine which accounts the update is for_
-
-To unsubscribe, you'll need to do the following:
-
-```typescript
-await sportX.unsubscribeActiveOrders(
-  "0xF59E93290383ED15F73Ee923EbbF29f79e37B6d8"
-);
-```
-
-If it failed, it will throw an `APISchemaError` or `APIError` depending on the type of error (former would be validation and latter would be an error from the API).
-
 ### Get past trades (graded/settled and ungraded/unsettled)
 You can get past trades for your account (regardless if you were the maker or taker in the trade), as well as query for trades that are still pending or unsettled using `getTrades(tradeRequest: IGetTradesRequest)`
 
@@ -797,6 +766,107 @@ which produces:
 You can track the status of the transaction on https://etherscan.io with the hash given by `hash`. Once this is complete, you will be able to place fill orders and submit new orders.
 
 
+### Subscribe to market changes
+To subscribe to market changes (game time changes, market is graded, market is invalidated, new market is created), you can do the following
+
+```typescript
+const realtime = await sportX.getRealtimeConnection()
+const channel = realtime.channels.get(`markets`)
+channel.subscribe(message => {
+  console.log(message)
+})
+// When done, channel.detach()
+```
+
+Here, `message` will be a market object in the same format you receive from `getActiveMarkets()`. Here is how you should update your collection:
+
+1. If the market does not exist in your collection, it is a new market, otherwise it should be replaced by `marketHash` field. 
+2. If the market has a status of "INACTIVE", it means that the market has been invalidated and you should remove it from your collection.
+
+### Subscribe to live scores by game
+To subscribe to live scores, you can do the following:
+
+```typescript
+const realtime = await sportX.getRealtimeConnection()
+const channel = realtime.channels.get(`live_scores`)
+channel.subscribe(message => {
+  console.log(message)
+})
+// When done, channel.detach()
+
+```
+
+Here, `message` will be a live score object that looks like this.
+
+```typescript
+export interface IDbLiveScores {
+  period: string;
+  teamOneScore: number;
+  teamTwoScore: number;
+  providerEventId: string;
+  providerLeagueId: number;
+  periodTime?: string;
+  sportId: number;
+}
+```
+
+Example:
+
+```json
+{
+  "sportId": 1,
+  "teamOneScore": 56,
+  "teamTwoScore": 88,
+  "sportXeventId": "3434994,1221",
+  "periodTime": "43:56",
+  "period": "Q4"
+}
+```
+
+You can map these back to the markets in `getActiveMarkets()` by using `sportXeventId`.
+
+### Subscribe to order book changes by market
+To subscribe to order book updates, you can do the following. You need the `marketHash` and the `baseToken` of the orders you are subscribing to:
+
+```typescript
+const realtime = await sportX.getRealtimeConnection()
+const baseToken = "0x44495672C86eEeE14adA9a3e453EEd68a338cdC1"
+const marketHash = "0xde2b8cf87f9f63e115a0adfeab3fa4191501fb10d7aef5c76099f475d3407caf"
+const channel = realtime.channels.get(`order_book:${baseToken}:${marketHash}`);
+channel.subscribe(message => {
+  console.log(message)
+})
+// When done, channel.detach()
+
+```
+
+The updates will be in an array and will look identical to those produced in `getOrders()`. You can use these simple rules to update your collection:
+
+1. If the order does not exist and has `status: "ACTIVE"`, you can add it to your collection.
+2. If the order exists by `orderHash` and the update order has `status: "ACTIVE"`, you should replace the order.
+3. If the order exists by `orderHash` and the update order has `status: "INACTIVE"`, you should remove that order from your collection.
+
+### Subscribe to active orders 
+To subscribe to active order updates for an address (for instance if you are a market maker), you need the ethereum address of the market maker, and the `baseToken` of orders you wish to track:
+
+```typescript
+const realtime = await sportX.getRealtimeConnection()
+const baseToken = "0x44495672C86eEeE14adA9a3e453EEd68a338cdC1"
+const maker = "0xc815634b516B63178A09dF7aAB013A520854F4f5"
+const channel = realtime.channels.get(`active_orders:${baseToken}:${maker}`);
+channel.subscribe(message => {
+  console.log(message)
+})
+// When done, channel.detach()
+
+```
+
+The updates will be in an array and will look identical to those produced in `getOrders()`. You can use these simple rules to update your active order collection:
+
+1. If the order does not exist and has `status: "ACTIVE"`, you can add it to your collection.
+2. If the order exists by `orderHash` and the update order has `status: "ACTIVE"`, you should replace the order.
+3. If the order exists by `orderHash` and the update order has `status: "INACTIVE"`, you should remove that order from your collection.
+
 ## Debugging
 
 We use https://www.npmjs.com/package/debug to provide debugging support for consumers of this package. Simply
@@ -804,3 +874,6 @@ We use https://www.npmjs.com/package/debug to provide debugging support for cons
 `export DEBUG=sportx-js`
 
 and you will see raw responses from the SportX relayer.
+
+## Realtime specific debugging
+We use a third party service called ably that 
