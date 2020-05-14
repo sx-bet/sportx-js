@@ -57,3 +57,9 @@ export function convertToTrueTokenAmount(amount: number) {
 export function convertToDisplayAmount(amount: string) {
   return formatUnits(amount, 18);
 }
+
+export function convertToTakerPayAmount(amount: string, odds: EthBigNumber) {
+  return bigNumberify(amount)
+    .mul(odds)
+    .div(FRACTION_DENOMINATOR.sub(odds));
+}

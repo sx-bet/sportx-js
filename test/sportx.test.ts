@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import { Wallet } from "ethers";
-import { parseUnits } from "ethers/utils";
+import { JsonRpcProvider } from "ethers/providers";
+import { Interface, parseUnits } from "ethers/utils";
 import "mocha";
 import moment from "moment";
 import { INewOrder } from "../src";
@@ -11,16 +12,22 @@ import {
   convertToAPIPercentageOdds,
   convertToTrueTokenAmount
 } from "../src/utils/convert";
+import daiArtifact from "./DAI.json";
 
 // tslint:disable no-string-literal
 
 const TEST_MNEMONIC =
   "elegant execute say gain evil afford puppy upon amateur planet lunar pen";
 
+export const TOKEN_TRANSFER_PROXY_ADDRESS = {
+  [Environments.RINKEBY]: "0x04CEB6182EDC5dEdedfa84EA6F112f01f1195830"
+};
+
 describe("sportx", () => {
   let sportX: ISportX;
-  const wallet = Wallet.fromMnemonic(TEST_MNEMONIC);
   const daiAddress = TOKEN_ADDRESSES[Tokens.DAI][Environments.RINKEBY];
+  const provider = new JsonRpcProvider(process.env.PROVIDER_URL);
+  const wallet = Wallet.fromMnemonic(TEST_MNEMONIC).connect(provider);
 
   before("should initialize", async () => {
     sportX = await newSportX(
@@ -148,11 +155,52 @@ describe("sportx", () => {
     expect(fill.status).to.equal("success");
   });
 
+  it("should fill an order with approval tx", async () => {
+    // const daiContract = new Contract(daiAddress, daiArtifact.abi, wallet)
+    // await daiContract.approve(TOKEN_TRANSFER_PROXY_ADDRESS[Environments.RINKEBY], parseUnits("10000", 18))
+    const activeMarkets = await sportX.getActiveMarkets();
+    const market = activeMarkets[7].marketHash;
+    const orders = await sportX.getOrders([market]);
+    const suggestions = await sportX.suggestOrders(
+      market,
+      convertToTrueTokenAmount(10),
+      true,
+      wallet.address,
+      daiAddress
+    );
+    const ordersToFill = orders.filter(order =>
+      suggestions.data.orderHashes.includes(order.orderHash)
+    );
+
+    const daiInterface = new Interface(daiArtifact.abi);
+    const data = daiInterface.functions.approve.encode([
+      TOKEN_TRANSFER_PROXY_ADDRESS[Environments.RINKEBY],
+      parseUnits("10", 18)
+    ]);
+    const nonce = await provider.getTransactionCount(wallet.address);
+    const tx = {
+      gasPrice: 2000000000,
+      gasLimit: 100000,
+      data,
+      to: daiAddress,
+      nonce,
+      chainId: (await provider.getNetwork()).chainId
+    };
+    const signedTransaction = await wallet.sign(tx);
+    const fill = await sportX.fillOrders(
+      ordersToFill,
+      [convertToTrueTokenAmount(5)],
+      undefined,
+      undefined,
+      signedTransaction
+    );
+  });
+
   it("should get connected realtime connection", async () => {
-    const connection = sportX.getRealtimeConnection()
-    const channel = connection.channels.get("live_scores")
-    expect(channel).not.undefined
-  })
+    const connection = sportX.getRealtimeConnection();
+    const channel = connection.channels.get("live_scores");
+    expect(channel).not.undefined;
+  });
 
   it("should meta approve DAI", async () => {
     await sportX.approveSportXContractsDai();

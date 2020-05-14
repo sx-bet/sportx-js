@@ -53,6 +53,7 @@ export interface IRelayerMetaFillOrderRequest {
   odds: string;
   returning: string;
   affiliateAddress?: string;
+  approvalTx?: string;
 }
 
 export interface IDetailedRelayerMakerOrder extends ISignedRelayerMakerOrder {

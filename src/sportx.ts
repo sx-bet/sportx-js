@@ -92,7 +92,8 @@ export interface ISportX extends EventEmitter {
     orders: IRelayerMakerOrder[],
     takerAmounts: string[],
     fillDetailsMetadata?: IFillDetailsMetadata,
-    affiliateAddress?: string
+    affiliateAddress?: string,
+    approvalTx?: string
   ): Promise<IRelayerResponse>;
   suggestOrders(
     marketHash: string,
@@ -337,7 +338,8 @@ class SportX extends EventEmitter implements ISportX {
     orders: ISignedRelayerMakerOrder[],
     takerAmounts: string[],
     fillDetailsMetadata?: IFillDetailsMetadata,
-    affiliateAddress?: string
+    affiliateAddress?: string,
+    approvalTx?: string
   ): Promise<IRelayerResponse> {
     this.debug("fillOrders");
     orders.forEach(order => {
@@ -397,7 +399,8 @@ class SportX extends EventEmitter implements ISportX {
       takerSig: takerSignature,
       fillSalt: fillSalt.toString(),
       ...finalFillDetailsMetadata,
-      affiliateAddress
+      affiliateAddress,
+      approvalTx
     };
     this.debug("Meta fill payload");
     this.debug(payload);
