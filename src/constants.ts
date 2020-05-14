@@ -1,6 +1,6 @@
 import { bigNumberify } from "ethers/utils";
 
-const RINKEBY_RELAYER_URL = "http://localhost:8080";
+const RINKEBY_RELAYER_URL = "https://rinkeby.api.sportx.bet";;
 const PRODUCTION_RELAYER_URL = "https://app.api.sportx.bet";
 const RELAYER_TIMEOUT = 10000;
 
