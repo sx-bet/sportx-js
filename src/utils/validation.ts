@@ -16,7 +16,7 @@ import {
 import { convertToAPIPercentageOdds } from "./convert";
 
 export function validateIGetPendingBetsRequest(payload: IPendingBetsRequest) {
-  const {bettor, startDate, endDate, fillHash, baseToken} = payload;
+  const { bettor, startDate, endDate, fillHash, baseToken } = payload;
   if (
     startDate !== undefined &&
     (typeof startDate !== "number" ||
@@ -35,12 +35,12 @@ export function validateIGetPendingBetsRequest(payload: IPendingBetsRequest) {
     return "invalid bettor";
   }
   if (fillHash !== undefined && !isHexString(fillHash)) {
-    return "invalid fillHash"
+    return "invalid fillHash";
   }
   if (baseToken !== undefined && !isHexString(baseToken)) {
-    return "invalid baseToken"
+    return "invalid baseToken";
   }
-  return "OK"
+  return "OK";
 }
 
 export function validateIGetTradesRequest(payload: IGetTradesRequest) {

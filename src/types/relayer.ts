@@ -144,7 +144,7 @@ export enum BetStatus {
   PENDING = "PENDING",
   SUCCESS = "SUCCESS",
   FAIL = "FAIL",
-  TIMEOUT = "TIMEOUT",
+  TIMEOUT = "TIMEOUT"
 }
 
 export interface IPendingBet {

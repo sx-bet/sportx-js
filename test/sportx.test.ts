@@ -5,12 +5,12 @@ import { Interface, parseUnits } from "ethers/utils";
 import "mocha";
 import moment from "moment";
 import { INewOrder, IPendingBetsRequest } from "../src";
-import { Environments, Tokens, TOKEN_ADDRESSES } from "../src/constants";
+import { Environments, TOKEN_ADDRESSES, Tokens } from "../src/constants";
 import { ISportX, newSportX } from "../src/sportx";
 import {
   convertFromAPIPercentageOdds,
   convertToAPIPercentageOdds,
-  convertToTrueTokenAmount,
+  convertToTrueTokenAmount
 } from "../src/utils/convert";
 import daiArtifact from "./DAI.json";
 
@@ -20,7 +20,7 @@ const TEST_MNEMONIC =
   "elegant execute say gain evil afford puppy upon amateur planet lunar pen";
 
 export const TOKEN_TRANSFER_PROXY_ADDRESS = {
-  [Environments.RINKEBY]: "0x04CEB6182EDC5dEdedfa84EA6F112f01f1195830",
+  [Environments.RINKEBY]: "0x04CEB6182EDC5dEdedfa84EA6F112f01f1195830"
 };
 
 describe("sportx", () => {
@@ -74,7 +74,7 @@ describe("sportx", () => {
         .add(1, "hour")
         .unix(),
       isMakerBettingOutcomeOne: true,
-      baseToken: daiAddress,
+      baseToken: daiAddress
     };
     const response = await sportX.newOrder(newOrder);
     expect(response.status).to.equal("success");
@@ -91,10 +91,10 @@ describe("sportx", () => {
         .add(1, "hour")
         .unix(),
       isMakerBettingOutcomeOne: true,
-      baseToken: daiAddress,
+      baseToken: daiAddress
     };
     const {
-      data: { orders },
+      data: { orders }
     } = await sportX.newOrder(newOrder);
     const response = await sportX.cancelOrder(orders, "Cancel Orders");
     expect(response.status).to.equal("success");
@@ -134,7 +134,7 @@ describe("sportx", () => {
 
   it("should get pending bets", async () => {
     const payload: IPendingBetsRequest = {
-      bettor: wallet.address,
+      bettor: wallet.address
     };
     const result = await sportX.getPendingOrFailedBets(payload);
   });
@@ -155,13 +155,13 @@ describe("sportx", () => {
       wallet.address,
       daiAddress
     );
-    const ordersToFill = orders.filter((order) =>
+    const ordersToFill = orders.filter(order =>
       suggestions.data.orderHashes.includes(order.orderHash)
     );
     const fill = await sportX.fillOrders(ordersToFill, [
-      convertToTrueTokenAmount(10),
+      convertToTrueTokenAmount(10)
     ]);
-    expect(fill.status).to.equal("success")
+    expect(fill.status).to.equal("success");
   });
 
   it("should fill an order with approval tx", async () => {
@@ -177,14 +177,14 @@ describe("sportx", () => {
       wallet.address,
       daiAddress
     );
-    const ordersToFill = orders.filter((order) =>
+    const ordersToFill = orders.filter(order =>
       suggestions.data.orderHashes.includes(order.orderHash)
     );
 
     const daiInterface = new Interface(daiArtifact.abi);
     const data = daiInterface.functions.approve.encode([
       TOKEN_TRANSFER_PROXY_ADDRESS[Environments.RINKEBY],
-      parseUnits("10", 18),
+      parseUnits("10", 18)
     ]);
     const nonce = await provider.getTransactionCount(wallet.address);
     const tx = {
@@ -193,7 +193,7 @@ describe("sportx", () => {
       data,
       to: daiAddress,
       nonce,
-      chainId: (await provider.getNetwork()).chainId,
+      chainId: (await provider.getNetwork()).chainId
     };
     const signedTransaction = await wallet.sign(tx);
     const fill = await sportX.fillOrders(
