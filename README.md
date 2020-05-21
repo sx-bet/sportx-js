@@ -27,13 +27,14 @@ You can do the following things with this API:
 7. Get suggestions of orders to fill (gives you the orders with the best odds)
 8. Fill order(s)
 9. Get all active orders for an account
-10. Get pending bets for a user
+10. Get pending or failed bets for a user
 11. Get past trades (graded/settled and ungraded/unsettled)
 12. Approve SportX contracts for DAI trading
 13. Subscribe to market changes
 14. Subscribe to live scores by game
 15. Subscribe to order book changes by market
-16. Subscribe to active orders 
+16. Subscribe to active orders
+17. Lookup markets
 
 We support betting in DAI or WETH.
 
@@ -41,7 +42,7 @@ In any case, to get started, you can either initialize via your ethereum private
 
 ### Initializing via ethereum private key
 
-For this you will need a URL of an Ethereum provider to connect to the network along with your Ethereum private key. You can get a dedicated URL at https://infura.io. *Ensure that the provider matches the specified environment. i.e., don't use a rinkeby provider for mainnet.*
+For this you will need a URL of an Ethereum provider to connect to the network along with your Ethereum private key. You can get a dedicated URL at https://infura.io. _Ensure that the provider matches the specified environment. i.e., don't use a rinkeby provider for mainnet._
 
 ```typescript
 import { Environments, newSportX } from "@sportx-bet/sportx-js";
@@ -55,13 +56,13 @@ async function main() {
 }
 ```
 
-Note that you do not need a SportX API key to get started. 
+Note that you do not need a SportX API key to get started.
 
 ### Initializing via an existing web3 instance.
 
 ```typescript
 import { Environments, newSportX } from "@sportx-bet/sportx-js";
-import { providers } from 'ethers';
+import { providers } from "ethers";
 
 async function main() {
   const sportX = await newSportX(
@@ -69,13 +70,31 @@ async function main() {
     undefined,
     undefined,
     new providers.Web3Provider(web3.currentProvider)
-  )
+  );
 }
 ```
 
 `newSportX` returns a promise that resolves to an initialized SportX API object.
 
 The following assumes you have an initialized sportX API object.
+
+### Error handling
+
+As a foreword the wrapper throws errors if parameters are bad, mismatched, or there is an internal error from the API. There are three types of errors the wrapper throws:
+
+1. `APIError`. This error is a 4XX from the API. You can find the reason for the error in the `details` property object on the error itself. An example `details` property is
+
+```json
+{
+  "statusCode": 400,
+  "error": "Bad Request",
+  "message": "TAKER_INSUFFICIENT_BASE_TOKEN_ALLOWANCE"
+}
+```
+
+"TAKER_INSUFFICIENT_BASE_TOKEN_ALLOWANCE" is the error code. The below sections will detail the possible `APIError` error codes that are possible for each method of the wrapper.
+
+2. `APISchemaError`. This error is the wrapper throwing an error before it reaches the API. In this case, one of the passed arguments are malformed. It will say which passed argument is malformed. 
 
 ### Get all the active markets
 
@@ -169,25 +188,27 @@ Example for an over/under/total market:
 
 ```json
 {
-    "status": "ACTIVE",
-    "marketHash": "0xa45de5dff4da161ef7c9170408f842c70f41a31800380d005a1a0a1e6abe67bb",
-    "outcomeOneName": "Over 3",
-    "outcomeTwoName": "Under 3",
-    "outcomeVoidName": "NO_GAME_OR_EVEN",
-    "teamOneName": "RKC Waalwijk",
-    "teamTwoName": "VVV Venlo",
-    "type": "OVER_UNDER_GOALS",
-    "gameTime": 1579977900,
-    "line": 3,
-    "sportXeventId": "1088774097,1928",
-    "sportLabel": "Soccer",
-    "sportId": 5,
-    "leagueId": 237,
-    "homeTeamFirst": true,
-    "leagueLabel": "Netherlands Eredivisie",
-    "group1": "Netherlands Eredivisie"
+  "status": "ACTIVE",
+  "marketHash": "0xa45de5dff4da161ef7c9170408f842c70f41a31800380d005a1a0a1e6abe67bb",
+  "outcomeOneName": "Over 3",
+  "outcomeTwoName": "Under 3",
+  "outcomeVoidName": "NO_GAME_OR_EVEN",
+  "teamOneName": "RKC Waalwijk",
+  "teamTwoName": "VVV Venlo",
+  "type": "OVER_UNDER_GOALS",
+  "gameTime": 1579977900,
+  "line": 3,
+  "sportXeventId": "1088774097,1928",
+  "sportLabel": "Soccer",
+  "sportId": 5,
+  "leagueId": 237,
+  "homeTeamFirst": true,
+  "leagueLabel": "Netherlands Eredivisie",
+  "group1": "Netherlands Eredivisie"
 }
 ```
+
+There are no errors to handle for this endpoint. 
 
 ### Get all the sports supported by SportX
 
@@ -204,6 +225,7 @@ interface ISport {
   label: string;
 }
 ```
+
 
 Example output:
 
@@ -244,35 +266,35 @@ Example output:
 ```json
 [
   {
-      "leagueId": 1,
-      "label": "NBA",
-      "sportId": 1,
-      "homeTeamFirst": false
+    "leagueId": 1,
+    "label": "NBA",
+    "sportId": 1,
+    "homeTeamFirst": false
   },
   {
-      "leagueId": 2,
-      "label": "NCAA",
-      "sportId": 1,
-      "homeTeamFirst": false
+    "leagueId": 2,
+    "label": "NCAA",
+    "sportId": 1,
+    "homeTeamFirst": false
   },
   {
-      "leagueId": 3,
-      "label": "NHL",
-      "sportId": 2,
-      "homeTeamFirst": false
+    "leagueId": 3,
+    "label": "NHL",
+    "sportId": 2,
+    "homeTeamFirst": false
   },
   {
-      "leagueId": 29,
-      "label": "English Premier League",
-      "sportId": 5,
-      "homeTeamFirst": true
-  },
+    "leagueId": 29,
+    "label": "English Premier League",
+    "sportId": 5,
+    "homeTeamFirst": true
+  }
 ]
 ```
 
 ### Submit a new order to a market
 
-*Note that to submit new orders you will first have to approve the SportX contracts for trading. See "Approve SportX contracts for DAI trading"*
+_Note that to submit new orders you will first have to approve the SportX contracts for trading. See "Approve SportX contracts for DAI trading"_
 
 The odds in the API are all in a special implied format. For example, 2.0 (decimal) = 0.5 (implied). You'll need to convert your odds into implied in order to submit a new order to SportX. The odds you submit to place a new order on SportX are the odds you will receive as a bookmaker. Best explained with an example:
 
@@ -342,7 +364,9 @@ If successful, the response will look like
 }
 ```
 
-If it failed, it will throw an `APISchemaError` or `APIError` depending on the type of error (former would be validation and latter would be an error from the API).
+The following `APIError` error codes are possible for this endpoint:
+
+- `INSUFFICIENT_BALANCE` - You do not have enough balance to submit a new order. The API considers all other orders you currently have outstanding on this particular (market,side,baseToken)
 
 ### Cancel an existing order
 
@@ -354,7 +378,7 @@ Example:
 
 ```typescript
 const response = await sportX.cancelOrder([
-  "0x066b9ce3e0b2e671695015db9cd772224120e03663e93d35ee447b86b2b49ef4"
+  "0x066b9ce3e0b2e671695015db9cd772224120e03663e93d35ee447b86b2b49ef4",
 ]);
 console.log(response);
 ```
@@ -372,14 +396,19 @@ If successful, the response will look like
 }
 ```
 
-If it failed, it will throw an `APISchemaError` or `APIError` depending on the type of error (former would be validation and latter would be an error from the API).
+If it failed, it will throw an `APISchemaError` or `APIError`.
+
+The following `APIError` error codes are possible for this endpoint:
+
+- `ORDERS_DONT_EIXST` - The orders you are cancelling no longer exist.
 
 You can supply a second parameter if you wish to show a message to the user (if you are a user-facing application) as this is using `eth_signTypedData` behind the scenes. For example you could pass the string "Cancel orders":
 
 ```typescript
-const response = await sportX.cancelOrder([
-  "0x066b9ce3e0b2e671695015db9cd772224120e03663e93d35ee447b86b2b49ef4"
-], "Cancel orders");
+const response = await sportX.cancelOrder(
+  ["0x066b9ce3e0b2e671695015db9cd772224120e03663e93d35ee447b86b2b49ef4"],
+  "Cancel orders"
+);
 console.log(response);
 ```
 
@@ -391,7 +420,7 @@ Example:
 
 ```typescript
 const orders = await sportX.getOrders([
-  "0x75f5d0544a38bf41afab5cfd0a2b40b8df32bd76d91bfa5ece47ba739b179e4d"
+  "0x75f5d0544a38bf41afab5cfd0a2b40b8df32bd76d91bfa5ece47ba739b179e4d",
 ]);
 console.log(orders);
 ```
@@ -418,7 +447,7 @@ Which produces:
     "fillAmount": "0",
     "orderHash": "0x4b44c1c7f7f32ea42813c624e2bdef570333da214e617a1827445d78a594f259",
     "marketHash": "0x75f5d0544a38bf41afab5cfd0a2b40b8df32bd76d91bfa5ece47ba739b179e4d",
-    "baseToken" :"0x44495672C86eEeE14adA9a3e453EEd68a338cdC1",
+    "baseToken": "0x44495672C86eEeE14adA9a3e453EEd68a338cdC1",
     "maker": "0xaD90d89b23Fc80bCF70c3E8CC23a21ccADFBC95F",
     "totalBetSize": "75000000000000000000",
     "percentageOdds": "896417220308870961",
@@ -505,17 +534,22 @@ Which produces:
 
 Typically, you would use these "suggestions" to actually fill an order. See the next section.
 
+The following `APIError` error codes are possible for this endpoint:
+
+- `BASE_TOKEN_MISMATCH` - The supplied base token is not supported by the API. See the metadata endpoint
+- `TAKER_ORDER_AMOUNT_TOO_LOW` - The amount requested to fill is too low.
+
 ### Filling orders
 
 To actually fill orders on SportX, you will need the actual orders themselves which you can obtain from `getOrders()` as well as the amount(s) you want to fill each order.
 
-*Note that to submit orders you will first have to approve the SportX contracts for trading. See "Approve SportX contracts for DAI trading"*
+_Note that to submit orders you will first have to approve the SportX contracts for trading. See "Approve SportX contracts for DAI trading"_
 
 The orders are filled meta style, meaning that the filler does not pay for gas and instead the user just signs an "intent to fill" hash. The API covers the gas fee.
 
 The signature is
 
-`fillOrders(orders: ISignedRelayerMakerOrder[], betAmounts: string[], fillDetailsMetadata?: IFillDetailsMetadata, affiliateAddress?: string)`
+`fillOrders(orders: ISignedRelayerMakerOrder[], betAmounts: string[], fillDetailsMetadata?: IFillDetailsMetadata, affiliateAddress?: string, approvalTx?: string)`
 
 Alternatively, you can use the `suggestOrders(marketHash, betSize, takerDirectionOutcomeOne, taker, baseToken)` method above to suggest to you the `orderHashes` with the best odds given your `betSize`.
 
@@ -560,6 +594,8 @@ This hash is a transaction hash for the actual ethereum transaction which you ca
 
 If you are an affiliate, you can pass your affiliate address as the last parameter `affiliateAddress` (after registering with SportX - please email [mailto](mailto:contact@sportx.bet) to register) to ensure you are paid out the affiliate fee when the bet is settled.
 
+If you wish to submit an approval transaction for an amount of at least the bet amount to the ERC20 token (instead of providing unlimited allowance to the SportX smart contracts) prior, you can craft the transaction, use `eth_signTransaction` to sign it, and submit the encoded version as the `approvalTx` parameter. On the backend, we will relayer the transaction for you, but provide you with an instant (optimistic) confirmation.
+
 Moreover, if you are a user facing application, similar to cancel order, you can pass an object with the format
 
 ```typescript
@@ -573,25 +609,36 @@ export interface IFillDetailsMetadata {
 }
 ```
 
-as the second last parameter to show the user some information using `eth_signTypedData`. 
+as the `fillDetailsMetadata` parameter to show the user some information using `eth_signTypedData`.
 
-#### Errors
-Here are the possible errors that can be returned from the endpoint with status code 400 and their meanings:
+The following `APIError` error codes are possible for this endpoint:
 
--  `[]_UNDEFINED_OR_MALFORMED` - a field is missing. Check the payload and ensure all the names are correct.
--  `ORDERS_NOT_UNIQUE` - Ensure that the order hashes of the orders passed are unique. If you want to fill the same order multiple times, increase the amount instead
--  `INCORRECT_ARRAY_LENGTHS` - The length of the `orders` array is not the same as the `betAmounts` array. Ensure they are the same.
--  `ORDERS_DONT_EXIST` - The orders you are trying to fill do not exist.
--  `TOO_CLOSE_TO_ORDER_EXPIRY` - The order is too close to its expiry. The API prevents filling orders too close to their expiry due to the time it takes to mine a block on Ethereum
--  `TAKER_AMOUNT_TOO_LOW` - One of the bet amounts in `betAmounts` is too low. Ensure that it meets the minimum as specified in the `getMetadata()` endpoint.
--  `BASE_TOKENS_NOT_SAME` - The base tokens of the orders are not the same. Ensure they are the same. 
--  `MARKETS_NOT_SAME` - The markets of the orders are not the same. Ensure they are the same.
--  `DIRECTIONS_NOT_SAME` - The directions of the orders are not the same. Ensure they are the same.
--  `META_TX_RATE_LIMIT_REACHED` - There is a maximum of 3 orders that can be submitted at once for each `taker` to prevent spam.
--  `INSUFFICIENT_SPACE` - One of the orders you are trying to fill has insufficient space. i.e., the bet amount is too high for this particular order.
--  `FILL_ALREADY_SUBMITTED` - This exact fill has already been submitted. Perhaps you have called the endpoint twice with identical parameters.
--  `BAD_AFFILIATE` - The affiliate passed is not registered with SportX. Message `contact@sportx.bet` to get registered.
+- `ORDERS_NOT_UNIQUE` - Ensure that the order hashes of the orders passed are unique. If you want to fill the same order multiple times, increase the amount instead
+- `INCORRECT_ARRAY_LENGTHS` - The length of the `orders` array is not the same as the `betAmounts` array. Ensure they are the same.
+- `ORDERS_DONT_EXIST` - The orders you are trying to fill do not exist.
+- `TOO_CLOSE_TO_ORDER_EXPIRY` - The order is too close to its expiry. The API prevents filling orders too close to their expiry due to the time it takes to mine a block on Ethereum
+- `TAKER_AMOUNT_TOO_LOW` - One of the bet amounts in `betAmounts` is too low. Ensure that it meets the minimum as specified in the `getMetadata()` endpoint.
+- `BASE_TOKENS_NOT_SAME` - The base tokens of the orders are not the same. Ensure they are the same.
+- `MARKETS_NOT_SAME` - The markets of the orders are not the same. Ensure they are the same.
+- `DIRECTIONS_NOT_SAME` - The directions of the orders are not the same. Ensure they are the same.
+- `NOT_MAIN_LINE` - For spread and over under markets where the "line" is changing, you can only currently fill orders on the "main" or "vegas" line. 
+- `META_TX_RATE_LIMIT_REACHED` - There is a maximum of 3 orders that can be submitted at once for each `taker` to prevent spam.
+- `INSUFFICIENT_SPACE` - One of the orders you are trying to fill has insufficient space. i.e., the bet amount is too high for this particular order.
+- `FILL_ALREADY_SUBMITTED` - This exact fill has already been submitted. Perhaps you have called the endpoint twice with identical parameters.
+- `BAD_AFFILIATE` - The affiliate passed is not registered or malformed.
 
+The following are only valid if you passed an `approvalTx` parameter
+
+- `APPROVAL_TX_BAD_TRANSACTION_FORMAT` - The format of the encoded transaction is bad.
+- `APPROVAL_TX_SIGNATURE_NOT_PRESENT` - The transaction is not signed
+- `APPROVAL_TX_TARGET_INVALID` - The `to` field for the approval transaction is not to the correct token
+- `APPROVAL_TX_VALUE_NOT_ZERO`- The approval tx cannot have any `value` specified
+- `APPROVAL_TX_FROM_UNDEFINED` - The `from` parameter is undefined or does not match the taker
+- `APPROVAL_TX_BAD_CHAIN_ID` - The chainId in the transaction is invalid
+- `APPROVAL_TX_BAD_NONCE` - The nonce of the approval tx is bad.
+- `APPROVAL_TX_BAD_DECODED_ARGUMENTS` - The `data` field of the transaction is malforemd
+- `APPROVAL_TX_INCORRECT_APPROVAL_TARGET` - The contract to be approved is incorrect. It must be the TokenTransferProxy address. See the `TOKEN_TRANSFER_PROXY_ADDRESS` constant.
+- `APPROVAL_TX_INSUFFICIENT_ALLOWANCE` - The allowance amount is insufficient. It must be greater than or equal to the amount of tokens that will be withdrew from the taker's account.
 
 ### Get all active orders for an account
 
@@ -640,17 +687,22 @@ Which produces:
 ]
 ```
 
-### Get pending bets for a user
+### Get pending or failed bets for a user
 
-Bets are instantly confirmed but they might have not settled yet on the blockchain. You can query bets that have yet to be settled using `sportX.getRecentPendingBets(bettor)`. _Note that this only works if the `bettor` is the taker in the trade_
+Bets are instantly confirmed but they might have not settled yet on the blockchain or in rare cases they might have failed. You can query bets that have yet to be settled using `sportX.getPendingOrFailedBets(bettor, startDate?, endDate?, fillHash?, baseToken?)`. _Note that this only works if the `bettor` is the taker in the trade_
 
 Example:
 
 ```typescript
-const pendingBets = await sportX.getRecentPendingBets(
-  "0xaD90d89b23Fc80bCF70c3E8CC23a21ccADFBC95F"
-);
-console.log(pendingBets);
+const pendingOrFailedBets = await sportX.getPendingOrFailedBets({
+  bettor: "0xaD90d89b23Fc80bCF70c3E8CC23a21ccADFBC95F",
+  startDate: 1590088356,
+  endDate: 1580411556,
+  fillHash:
+    "0xe0e0802da0681030e43e4bb26209381f3be60193dd7a6ee3e70758751e417e24",
+  baseToken: "0x44495672C86eEeE14adA9a3e453EEd68a338cdC1",
+});
+console.log(pendingOrFailedBets);
 ```
 
 Which produces the details of the bets like so:
@@ -662,21 +714,19 @@ Which produces the details of the bets like so:
     "orderHashes": [
       "0xe0cacd1adbc174b325d670ccb9dda58482b8921bf263fe4567c306ad5e2d7e96"
     ],
-    "taker": "0x9e347e2EdC736971f218cf9B0D38c80b96625C4C",
+    "taker": "0xaD90d89b23Fc80bCF70c3E8CC23a21ccADFBC95F",
     "status": "PENDING",
-    "betTime": 1573851254,
+    "betTime": 1590089356,
     "fillHash": "0xe0e0802da0681030e43e4bb26209381f3be60193dd7a6ee3e70758751e417e24",
-    "nonce": 1099,
-    "marketHashes": [
-      "0x33d6c56678e8ce91182d961134ccc2d78dbb62142772cf762c6b7ed72535ab0d"
-    ],
-    "percentageOdds": ["47216553169198533263"],
-    "isMakerBettingOutcomeOne": [false]
+    "baseToken": "0x44495672C86eEeE14adA9a3e453EEd68a338cdC1"
   }
 ]
 ```
 
+The possible statuses can be "TIMEOUT", "FAIL", or "PENDING"
+
 ### Get past trades (graded/settled and ungraded/unsettled)
+
 You can get past trades for your account (regardless if you were the maker or taker in the trade), as well as query for trades that are still pending or unsettled using `getTrades(tradeRequest: IGetTradesRequest)`
 
 where the payload looks like:
@@ -714,7 +764,7 @@ console.log(unsettledTrades);
 `settled` is true or false. You can search for only unsettled trades or settled trades using this.
 `marketHashes` allows you to filter by certain markets only
 `baseToken` allows you to filter by certain tokens only
-`maker` allows you to sort by trades where the bettor is the maker only, or the taker only. 
+`maker` allows you to sort by trades where the bettor is the maker only, or the taker only.
 
 Which produces unsettled trades like so:
 
@@ -743,57 +793,61 @@ Which produces unsettled trades like so:
     "betTime": 1579194269,
     "settled": false,
     "bettingOutcomeOne": true
-  },
+  }
 ]
 ```
 
 ### Approve SportX contracts for DAI trading
+
 Before you are able to fill orders or submit new orders, you need to approve the SportX contracts for trading. You can do this by simply calling:
 
 ```typescript
-const result = await sportX.approveSportXContractsDai()
-console.log(result)
+const result = await sportX.approveSportXContractsDai();
+console.log(result);
 ```
 
 which produces:
+
 ```json
-{ "status": "success",
-  "data":
-   { "hash":
-      "0x71a67000f7bfd91db39115abd437dc33c7bd774d981d11ac54e00606ea11fa95" } }
+{
+  "status": "success",
+  "data": {
+    "hash": "0x71a67000f7bfd91db39115abd437dc33c7bd774d981d11ac54e00606ea11fa95"
+  }
+}
 ```
 
 You can track the status of the transaction on https://etherscan.io with the hash given by `hash`. Once this is complete, you will be able to place fill orders and submit new orders.
 
-
 ### Subscribe to market changes
+
 To subscribe to market changes (game time changes, market is graded, market is invalidated, new market is created), you can do the following
 
 ```typescript
-const realtime = await sportX.getRealtimeConnection()
-const channel = realtime.channels.get(`markets`)
-channel.subscribe(message => {
-  console.log(message)
-})
+const realtime = await sportX.getRealtimeConnection();
+const channel = realtime.channels.get(`markets`);
+channel.subscribe((message) => {
+  console.log(message);
+});
 // When done, channel.detach()
 ```
 
 Here, `message` will be a market object in the same format you receive from `getActiveMarkets()`. Here is how you should update your collection:
 
-1. If the market does not exist in your collection, it is a new market, otherwise it should be replaced by `marketHash` field. 
+1. If the market does not exist in your collection, it is a new market, otherwise it should be replaced by `marketHash` field.
 2. If the market has a status of "INACTIVE", it means that the market has been invalidated and you should remove it from your collection.
 
 ### Subscribe to live scores by game
+
 To subscribe to live scores, you can do the following:
 
 ```typescript
-const realtime = await sportX.getRealtimeConnection()
-const channel = realtime.channels.get(`live_scores`)
-channel.subscribe(message => {
-  console.log(message)
-})
+const realtime = await sportX.getRealtimeConnection();
+const channel = realtime.channels.get(`live_scores`);
+channel.subscribe((message) => {
+  console.log(message);
+});
 // When done, channel.detach()
-
 ```
 
 Here, `message` will be a live score object that looks like this.
@@ -826,18 +880,19 @@ Example:
 You can map these back to the markets in `getActiveMarkets()` by using `sportXeventId`.
 
 ### Subscribe to order book changes by market
+
 To subscribe to order book updates, you can do the following. You need the `marketHash` and the `baseToken` of the orders you are subscribing to:
 
 ```typescript
-const realtime = await sportX.getRealtimeConnection()
-const baseToken = "0x44495672C86eEeE14adA9a3e453EEd68a338cdC1"
-const marketHash = "0xde2b8cf87f9f63e115a0adfeab3fa4191501fb10d7aef5c76099f475d3407caf"
+const realtime = await sportX.getRealtimeConnection();
+const baseToken = "0x44495672C86eEeE14adA9a3e453EEd68a338cdC1";
+const marketHash =
+  "0xde2b8cf87f9f63e115a0adfeab3fa4191501fb10d7aef5c76099f475d3407caf";
 const channel = realtime.channels.get(`order_book:${baseToken}:${marketHash}`);
-channel.subscribe(message => {
-  console.log(message)
-})
+channel.subscribe((message) => {
+  console.log(message);
+});
 // When done, channel.detach()
-
 ```
 
 The updates will be in an array and will look identical to those produced in `getOrders()`. You can use these simple rules to update your collection:
@@ -846,19 +901,19 @@ The updates will be in an array and will look identical to those produced in `ge
 2. If the order exists by `orderHash` and the update order has `status: "ACTIVE"`, you should replace the order.
 3. If the order exists by `orderHash` and the update order has `status: "INACTIVE"`, you should remove that order from your collection.
 
-### Subscribe to active orders 
+### Subscribe to active orders
+
 To subscribe to active order updates for an address (for instance if you are a market maker), you need the ethereum address of the market maker, and the `baseToken` of orders you wish to track:
 
 ```typescript
-const realtime = await sportX.getRealtimeConnection()
-const baseToken = "0x44495672C86eEeE14adA9a3e453EEd68a338cdC1"
-const maker = "0xc815634b516B63178A09dF7aAB013A520854F4f5"
+const realtime = await sportX.getRealtimeConnection();
+const baseToken = "0x44495672C86eEeE14adA9a3e453EEd68a338cdC1";
+const maker = "0xc815634b516B63178A09dF7aAB013A520854F4f5";
 const channel = realtime.channels.get(`active_orders:${baseToken}:${maker}`);
-channel.subscribe(message => {
-  console.log(message)
-})
+channel.subscribe((message) => {
+  console.log(message);
+});
 // When done, channel.detach()
-
 ```
 
 The updates will be in an array and will look identical to those produced in `getOrders()`. You can use these simple rules to update your active order collection:
@@ -866,6 +921,42 @@ The updates will be in an array and will look identical to those produced in `ge
 1. If the order does not exist and has `status: "ACTIVE"`, you can add it to your collection.
 2. If the order exists by `orderHash` and the update order has `status: "ACTIVE"`, you should replace the order.
 3. If the order exists by `orderHash` and the update order has `status: "INACTIVE"`, you should remove that order from your collection.
+
+### Lookup markets
+
+You can lookup markets by marketHash by using `marketLookup(marketHashes)`.
+
+```typescript
+const markets = await sportX.marketLookup([
+  "0xde2b8cf87f9f63e115a0adfeab3fa4191501fb10d7aef5c76099f475d3407caf",
+]);
+console.log(markets);
+```
+
+which produces an output in the same format as `getActiveMarkets()`. Example:
+
+```json
+[
+  {
+    "status": "ACTIVE",
+    "marketHash": "0xde2b8cf87f9f63e115a0adfeab3fa4191501fb10d7aef5c76099f475d3407caf",
+    "outcomeOneName": "Brett Johns",
+    "outcomeTwoName": "Tony Gravely",
+    "outcomeVoidName": "NO_GAME",
+    "teamOneName": "Brett Johns",
+    "teamTwoName": "Tony Gravely",
+    "type": "MONEY_LINE",
+    "gameTime": 1579991700,
+    "sportXeventId": "1083108429,1624",
+    "sportLabel": "Mixed Martial Arts",
+    "sportId": 7,
+    "leagueId": 34,
+    "homeTeamFirst": true,
+    "leagueLabel": "UFC",
+    "group1": "UFC"
+  }
+]
+```
 
 ## Debugging
 
@@ -876,4 +967,5 @@ We use https://www.npmjs.com/package/debug to provide debugging support for cons
 and you will see raw responses from the SportX relayer.
 
 ## Realtime specific debugging
-We use a third party service called ably that 
+
+We use a third party service called ably that

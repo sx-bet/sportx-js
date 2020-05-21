@@ -48,6 +48,7 @@ export const RELAYER_HTTP_ENDPOINTS = {
   PENDING_BETS: "/pending-bets",
   METADATA: "/metadata",
   ACTIVE_MARKETS: "/markets/active",
+  HISTORICAL_MARKETS: "/markets/find",
   NEW_ORDER: "/orders/new",
   SUGGEST_ORDERS: "/orders/suggest",
   FILL_ORDERS: "/orders/fill",

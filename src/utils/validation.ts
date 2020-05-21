@@ -10,9 +10,38 @@ import {
   IGetTradesRequest,
   INewOrder,
   IRelayerMakerOrder,
-  ISignedRelayerMakerOrder
+  ISignedRelayerMakerOrder,
+  IPendingBetsRequest
 } from "../types/relayer";
 import { convertToAPIPercentageOdds } from "./convert";
+
+export function validateIGetPendingBetsRequest(payload: IPendingBetsRequest) {
+  const {bettor, startDate, endDate, fillHash, baseToken} = payload;
+  if (
+    startDate !== undefined &&
+    (typeof startDate !== "number" ||
+      startDate < 0 ||
+      !Number.isInteger(startDate))
+  ) {
+    return "invalid startDate";
+  }
+  if (
+    endDate !== undefined &&
+    (typeof endDate !== "number" || endDate < 0 || !Number.isInteger(endDate))
+  ) {
+    return "invalid endDate";
+  }
+  if (!isAddress(bettor)) {
+    return "invalid bettor";
+  }
+  if (fillHash !== undefined && !isHexString(fillHash)) {
+    return "invalid fillHash"
+  }
+  if (baseToken !== undefined && !isHexString(baseToken)) {
+    return "invalid baseToken"
+  }
+  return "OK"
+}
 
 export function validateIGetTradesRequest(payload: IGetTradesRequest) {
   const {

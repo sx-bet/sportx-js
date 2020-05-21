@@ -30,6 +30,10 @@ export interface IRelayerMarketOrderRequest {
   baseToken: string;
 }
 
+export interface IRelayerHistoricalMarketRequest {
+  marketHashes: string[];
+}
+
 export interface IGetTradesRequest {
   startDate?: number;
   endDate?: number;
@@ -38,6 +42,13 @@ export interface IGetTradesRequest {
   marketHashes?: string[];
   baseToken?: string;
   maker?: boolean;
+}
+export interface IPendingBetsRequest {
+  bettor: string;
+  startDate?: number;
+  endDate?: number;
+  fillHash?: string;
+  baseToken?: string;
 }
 
 export interface IRelayerMetaFillOrderRequest {
@@ -129,17 +140,21 @@ export interface ITrade {
   settled: boolean;
 }
 
+export enum BetStatus {
+  PENDING = "PENDING",
+  SUCCESS = "SUCCESS",
+  FAIL = "FAIL",
+  TIMEOUT = "TIMEOUT",
+}
+
 export interface IPendingBet {
-  marketHashes: string[];
-  percentageOdds: string[];
-  isMakerBettingOutcomeOne: boolean[];
   taker: string;
   fillAmounts: string[];
   orderHashes: string[];
-  status: string;
+  status: BetStatus;
   betTime: number;
   fillHash: string;
-  nonce: number;
+  baseToken: string;
 }
 
 export interface IMarket {
