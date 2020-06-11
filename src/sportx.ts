@@ -30,6 +30,7 @@ import {
   IFillDetails,
   IFillDetailsMetadata,
   IPermit,
+  IPermitSignature,
 } from "./types/internal";
 import {
   IDetailedRelayerMakerOrder,
@@ -94,7 +95,7 @@ export interface ISportX {
     takerAmounts: string[],
     fillDetailsMetadata?: IFillDetailsMetadata,
     affiliateAddress?: string,
-    approvalTx?: string
+    permitPayload?: IPermitSignature
   ): Promise<IRelayerResponse>;
   suggestOrders(
     marketHash: string,
@@ -369,7 +370,7 @@ class SportX implements ISportX {
     takerAmounts: string[],
     fillDetailsMetadata?: IFillDetailsMetadata,
     affiliateAddress?: string,
-    approvalTx?: string
+    permitPayload?: IPermitSignature
   ): Promise<IRelayerResponse> {
     this.debug("fillOrders");
     orders.forEach((order) => {
@@ -430,7 +431,7 @@ class SportX implements ISportX {
       fillSalt: fillSalt.toString(),
       ...finalFillDetailsMetadata,
       affiliateAddress,
-      approvalTx,
+      permitPayload,
     };
     this.debug("Meta fill payload");
     this.debug(payload);

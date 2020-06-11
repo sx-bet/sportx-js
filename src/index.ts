@@ -1,17 +1,19 @@
 export {
   Environments,
   PRODUCTION_RELAYER_URL,
-  RINKEBY_RELAYER_URL,
   RELAYER_TIMEOUT,
-  Tokens
+  RINKEBY_RELAYER_URL,
+  Tokens,
 } from "./constants";
 export * from "./errors";
 export * from "./sportx";
-export * from "./types/relayer";
 export * from "./types/internal";
+export * from "./types/relayer";
 export {
-  convertToDisplayAmount,
+  convertFromAPIPercentageOdds,
   convertToAPIPercentageOdds,
+  convertToDisplayAmount,
+  convertToTakerPayAmount,
   convertToTrueTokenAmount,
-  convertFromAPIPercentageOdds
 } from "./utils/convert";
+export { getDaiPermitEIP712Payload } from "./utils/signing";

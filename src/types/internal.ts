@@ -20,6 +20,10 @@ export interface IPermit {
   allowed: boolean;
 }
 
+export interface IPermitSignature extends IPermit {
+  signature: string;
+}
+
 export interface IFillDetailsMetadata {
   action: string;
   market: string;

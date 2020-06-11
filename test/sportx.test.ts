@@ -200,8 +200,7 @@ describe("sportx", () => {
       ordersToFill,
       [convertToTrueTokenAmount(5)],
       undefined,
-      undefined,
-      signedTransaction
+      undefined
     );
   });
 

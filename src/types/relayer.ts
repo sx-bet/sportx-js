@@ -1,4 +1,4 @@
-import { ICancelDetails } from "./internal";
+import { ICancelDetails, IPermitSignature } from "./internal";
 
 export interface IRelayerMakerOrder {
   marketHash: string;
@@ -64,7 +64,7 @@ export interface IRelayerMetaFillOrderRequest {
   odds: string;
   returning: string;
   affiliateAddress?: string;
-  approvalTx?: string;
+  permitPayload?: IPermitSignature;
 }
 
 export interface IDetailedRelayerMakerOrder extends ISignedRelayerMakerOrder {
@@ -182,3 +182,4 @@ export interface IMarket {
   homeTeamFirst: boolean;
   leagueLabel?: string;
 }
+
