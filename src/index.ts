@@ -1,9 +1,13 @@
 export {
   Environments,
-  PRODUCTION_RELAYER_URL,
   RELAYER_TIMEOUT,
-  RINKEBY_RELAYER_URL,
   Tokens,
+  RELAYER_URLS,
+  TOKEN_TRANSFER_PROXY_ADDRESS,
+  TOKEN_ADDRESSES,
+  EIP712_FILL_HASHER_ADDRESSES,
+  RELAYER_HTTP_ENDPOINTS,
+  FILL_ORDER_ADDRESS
 } from "./constants";
 export * from "./errors";
 export * from "./sportx";

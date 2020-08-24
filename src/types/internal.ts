@@ -20,7 +20,11 @@ export interface IPermit {
   allowed: boolean;
 }
 
-export interface IPermitSignature extends IPermit {
+export interface IApproveProxyPayload {
+  owner: string;
+  spender: string;
+  tokenAddress: string;
+  amount: string;
   signature: string;
 }
 

@@ -15,13 +15,12 @@ import daiArtifact from "./artifacts/DAI.json";
 import {
   EIP712_FILL_HASHER_ADDRESSES,
   Environments,
-  PRODUCTION_RELAYER_URL,
   RELAYER_HTTP_ENDPOINTS,
   RELAYER_TIMEOUT,
-  RINKEBY_RELAYER_URL,
   Tokens,
   TOKEN_ADDRESSES,
   TOKEN_TRANSFER_PROXY_ADDRESS,
+  RELAYER_URLS,
 } from "./constants";
 import { APIError } from "./errors/api_error";
 import { APISchemaError } from "./errors/schema_error";
@@ -30,7 +29,6 @@ import {
   IFillDetails,
   IFillDetailsMetadata,
   IPermit,
-  IPermitSignature,
 } from "./types/internal";
 import {
   IDetailedRelayerMakerOrder,
@@ -69,6 +67,7 @@ import {
   validateINewOrderSchema,
   validateISignedRelayerMakerOrder,
 } from "./utils/validation";
+import {IApproveProxyPayload} from "./types/internal"
 
 export interface ISportX {
   init(): Promise<void>;
@@ -95,7 +94,7 @@ export interface ISportX {
     takerAmounts: string[],
     fillDetailsMetadata?: IFillDetailsMetadata,
     affiliateAddress?: string,
-    permitPayload?: IPermitSignature
+    approveProxyPayload?: IApproveProxyPayload
   ): Promise<IRelayerResponse>;
   suggestOrders(
     marketHash: string,
@@ -107,6 +106,7 @@ export interface ISportX {
   getTrades(tradeRequest: IGetTradesRequest): Promise<ITrade[]>;
   approveSportXContractsDai(): Promise<IRelayerResponse>;
   getRealtimeConnection(): ably.Types.RealtimePromise;
+  getEip712Signature(payload: any): Promise<string>
 }
 
 class SportX implements ISportX {
@@ -145,14 +145,11 @@ class SportX implements ISportX {
     } else {
       throw new Error(`Neither privateKey nor provider provided.`);
     }
-    if (env === Environments.PRODUCTION) {
-      this.relayerUrl = PRODUCTION_RELAYER_URL;
-    } else if (env === Environments.RINKEBY) {
-      this.relayerUrl = RINKEBY_RELAYER_URL;
-    } else {
-      throw new Error(`Invalid environment: ${env}`);
+    if (!Object.values(Environments).includes(env)) {
+      throw new Error(`Invalid environment: ${env}`)
     }
     this.environment = env;
+    this.relayerUrl = RELAYER_URLS[env]
     this.daiWrapper = new Contract(
       TOKEN_ADDRESSES[Tokens.DAI][this.environment],
       daiArtifact.abi,
@@ -370,7 +367,7 @@ class SportX implements ISportX {
     takerAmounts: string[],
     fillDetailsMetadata?: IFillDetailsMetadata,
     affiliateAddress?: string,
-    permitPayload?: IPermitSignature
+    approveProxyPayload?: IApproveProxyPayload
   ): Promise<IRelayerResponse> {
     this.debug("fillOrders");
     orders.forEach((order) => {
@@ -431,7 +428,7 @@ class SportX implements ISportX {
       fillSalt: fillSalt.toString(),
       ...finalFillDetailsMetadata,
       affiliateAddress,
-      permitPayload,
+      approveProxyPayload,
     };
     this.debug("Meta fill payload");
     this.debug(payload);
@@ -626,7 +623,7 @@ class SportX implements ISportX {
     return result as IRelayerResponse;
   }
 
-  private async getEip712Signature(payload: any) {
+  public async getEip712Signature(payload: any) {
     if (this.privateKey) {
       const bufferPrivateKey = Buffer.from(this.privateKey.substring(2), "hex");
       const signature: string = (ethSigUtil as any).signTypedData_v4(
