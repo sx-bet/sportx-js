@@ -11,20 +11,26 @@ import {
   randomBytes,
 } from "ethers/utils";
 import { isArray, isBoolean } from "util";
-import daiArtifact from "./artifacts/DAI.json";
+import ChildERC20 from "./artifacts/ChildERC20.json";
+import DAI from "./artifacts/DAI.json";
+import IERC20 from "./artifacts/IERC20.json";
 import {
   EIP712_FILL_HASHER_ADDRESSES,
   Environments,
+  MainchainNetworks,
   RELAYER_HTTP_ENDPOINTS,
   RELAYER_TIMEOUT,
+  RELAYER_URLS,
+  SidechainNetworks,
   Tokens,
   TOKEN_ADDRESSES,
   TOKEN_TRANSFER_PROXY_ADDRESS,
-  RELAYER_URLS,
 } from "./constants";
 import { APIError } from "./errors/api_error";
 import { APISchemaError } from "./errors/schema_error";
 import {
+  IApproveProxyPayload,
+  IBaseTokenWrappers,
   ICancelDetails,
   IFillDetails,
   IFillDetailsMetadata,
@@ -51,6 +57,7 @@ import {
 } from "./types/relayer";
 import { convertToContractOrder } from "./utils/convert";
 import { tryParseJson } from "./utils/misc";
+import { getMainchainNetwork, getSidechainNetwork } from "./utils/networks";
 import {
   getCancelOrderEIP712Payload,
   getDaiPermitEIP712Payload,
@@ -67,7 +74,6 @@ import {
   validateINewOrderSchema,
   validateISignedRelayerMakerOrder,
 } from "./utils/validation";
-import {IApproveProxyPayload} from "./types/internal"
 
 export interface ISportX {
   init(): Promise<void>;
@@ -106,55 +112,62 @@ export interface ISportX {
   getTrades(tradeRequest: IGetTradesRequest): Promise<ITrade[]>;
   approveSportXContractsDai(): Promise<IRelayerResponse>;
   getRealtimeConnection(): ably.Types.RealtimePromise;
-  getEip712Signature(payload: any): Promise<string>
+  getEip712Signature(payload: any): Promise<string>;
 }
 
 class SportX implements ISportX {
-  private signingWallet: Signer;
+  private mainchainSigningWallet: Signer;
   private relayerUrl: string;
-  private provider: JsonRpcProvider;
+  private mainchainProvider: JsonRpcProvider;
+  private sidechainProvider: JsonRpcProvider;
   private initialized: boolean = false;
   private debug = debug("sportx-js");
   private metadata!: IMetadata;
   private ably!: ably.Types.RealtimePromise;
   private environment: Environments;
   private privateKey!: string;
-  private chainId!: number;
-  private daiWrapper: Contract;
+  private mainchainChainId!: number;
+  private mainchainNetwork: MainchainNetworks;
+  private sidechainNetwork: SidechainNetworks;
+  private baseTokenWrappers: IBaseTokenWrappers = {};
 
   constructor(
     env: Environments,
+    sidechainProviderUrl: string,
     privateKey?: string,
-    providerUrl?: string,
-    provider?: providers.Web3Provider
+    mainchainProviderUrl?: string,
+    mainchainProvider?: providers.Web3Provider
   ) {
+    if (!sidechainProviderUrl) {
+      throw new Error(`sidechainProviderUrl not provided`);
+    }
+    this.sidechainProvider = new JsonRpcProvider(sidechainProviderUrl);
     if (privateKey && !isHexString(privateKey)) {
       throw new Error(`${privateKey} is not a valid private key.`);
     } else if (privateKey) {
-      if (!providerUrl) {
+      if (!mainchainProviderUrl) {
         throw new Error(
-          `Provider URL must be provided if initializing via private key`
+          `${mainchainProviderUrl} is not provided. Required for initialization via private key`
         );
       }
-      this.provider = new JsonRpcProvider(providerUrl);
-      this.signingWallet = new Wallet(privateKey);
+      this.mainchainProvider = new JsonRpcProvider(mainchainProviderUrl);
+      this.mainchainSigningWallet = new Wallet(privateKey).connect(
+        this.mainchainProvider
+      );
       this.privateKey = privateKey;
-    } else if (provider) {
-      this.signingWallet = provider.getSigner(0);
-      this.provider = provider;
+    } else if (mainchainProvider) {
+      this.mainchainSigningWallet = mainchainProvider.getSigner(0);
+      this.mainchainProvider = mainchainProvider;
     } else {
-      throw new Error(`Neither privateKey nor provider provided.`);
+      throw new Error(`Neither privateKey nor both providers provided.`);
     }
     if (!Object.values(Environments).includes(env)) {
-      throw new Error(`Invalid environment: ${env}`)
+      throw new Error(`Invalid environment: ${env}`);
     }
     this.environment = env;
-    this.relayerUrl = RELAYER_URLS[env]
-    this.daiWrapper = new Contract(
-      TOKEN_ADDRESSES[Tokens.DAI][this.environment],
-      daiArtifact.abi,
-      this.provider
-    );
+    this.relayerUrl = RELAYER_URLS[env];
+    this.mainchainNetwork = getMainchainNetwork(this.environment);
+    this.sidechainNetwork = getSidechainNetwork(this.environment);
   }
 
   public getRealtimeConnection(): ably.Types.RealtimePromise {
@@ -175,8 +188,34 @@ class SportX implements ISportX {
       setTimeout(() => reject(), RELAYER_TIMEOUT);
     });
     this.metadata = await this.getMetadata();
-    const network = await this.provider.getNetwork();
-    this.chainId = network.chainId;
+    const mainchainNetwork = await this.mainchainProvider.getNetwork();
+    this.mainchainChainId = mainchainNetwork.chainId;
+    Object.entries(TOKEN_ADDRESSES[this.mainchainNetwork]).forEach(
+      ([symbol, address]) => {
+        if (symbol === Tokens.DAI) {
+          this.baseTokenWrappers[address] = new Contract(
+            address,
+            DAI.abi,
+            this.mainchainSigningWallet
+          );
+        } else {
+          this.baseTokenWrappers[address] = new Contract(
+            address,
+            IERC20.abi,
+            this.mainchainSigningWallet
+          );
+        }
+      }
+    );
+    Object.entries(TOKEN_ADDRESSES[this.sidechainNetwork]).map(
+      async ([, address]) => {
+        this.baseTokenWrappers[address] = new Contract(
+          address,
+          ChildERC20.abi,
+          this.sidechainProvider
+        );
+      }
+    );
     this.initialized = true;
     this.debug("Initialized");
   }
@@ -274,7 +313,7 @@ class SportX implements ISportX {
     const salt = bigNumberify(randomBytes(32)).toString();
     const apiMakerOrder: IRelayerMakerOrder = {
       marketHash: order.marketHash,
-      maker: await this.signingWallet.getAddress(),
+      maker: await this.mainchainSigningWallet.getAddress(),
       totalBetSize: bigNumBetSize.toString(),
       percentageOdds: order.percentageOdds,
       expiry: order.expiry.toString(),
@@ -287,7 +326,7 @@ class SportX implements ISportX {
     this.debug(apiMakerOrder);
     const signature = await getOrderSignature(
       apiMakerOrder,
-      this.signingWallet
+      this.mainchainSigningWallet
     );
     this.debug(`New order signature: ${signature}`);
     const signedApiMakerOrder: ISignedRelayerMakerOrder = {
@@ -300,7 +339,7 @@ class SportX implements ISportX {
       `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.NEW_ORDER}`,
       {
         method: "POST",
-        body: JSON.stringify({orders: [signedApiMakerOrder]}),
+        body: JSON.stringify({ orders: [signedApiMakerOrder] }),
         headers: { "Content-Type": "application/json" },
       }
     );
@@ -416,14 +455,14 @@ class SportX implements ISportX {
     };
     const fillOrderPayload = getFillOrderEIP712Payload(
       fillDetails,
-      this.chainId,
+      this.mainchainChainId,
       EIP712_FILL_HASHER_ADDRESSES[this.environment]
     );
     const takerSignature = await this.getEip712Signature(fillOrderPayload);
     const payload: IRelayerMetaFillOrderRequest = {
       orderHashes,
       takerAmounts,
-      taker: await this.signingWallet.getAddress(),
+      taker: await this.mainchainSigningWallet.getAddress(),
       takerSig: takerSignature,
       fillSalt: fillSalt.toString(),
       ...finalFillDetailsMetadata,
@@ -464,7 +503,7 @@ class SportX implements ISportX {
     };
     const cancelOrderPayload = getCancelOrderEIP712Payload(
       cancelDetails,
-      this.chainId
+      this.mainchainChainId
     );
     const cancelSignature = await this.getEip712Signature(cancelOrderPayload);
     const payload: IRelayerCancelOrderRequest = {
@@ -514,7 +553,9 @@ class SportX implements ISportX {
     );
     this.debug("Relayer response");
     this.debug(result);
-    const { data: {bets} } = result;
+    const {
+      data: { bets },
+    } = result;
     const pendingBets: IPendingBet[] = bets;
     return pendingBets;
   }
@@ -584,8 +625,10 @@ class SportX implements ISportX {
   }
 
   public async approveSportXContractsDai() {
-    const walletAddress = await this.signingWallet.getAddress();
-    const nonce: BigNumber = await this.daiWrapper.nonces(walletAddress);
+    const walletAddress = await this.mainchainSigningWallet.getAddress();
+    const nonce: BigNumber = await this.baseTokenWrappers[
+      TOKEN_ADDRESSES[this.mainchainNetwork][Tokens.DAI]
+    ].nonces(walletAddress);
     const details: IPermit = {
       holder: walletAddress,
       spender: TOKEN_TRANSFER_PROXY_ADDRESS[this.environment],
@@ -595,8 +638,8 @@ class SportX implements ISportX {
     };
     const signPayload = getDaiPermitEIP712Payload(
       details,
-      this.chainId,
-      TOKEN_ADDRESSES[Tokens.DAI][this.environment]
+      this.mainchainChainId,
+      TOKEN_ADDRESSES[this.mainchainNetwork][Tokens.DAI]
     );
     const signature = await this.getEip712Signature(signPayload);
     const payload = {
@@ -623,7 +666,7 @@ class SportX implements ISportX {
     return result as IRelayerResponse;
   }
 
-  public async getEip712Signature(payload: any) {
+  async getEip712Signature(payload: any) {
     if (this.privateKey) {
       const bufferPrivateKey = Buffer.from(this.privateKey.substring(2), "hex");
       const signature: string = (ethSigUtil as any).signTypedData_v4(
@@ -632,20 +675,20 @@ class SportX implements ISportX {
       );
       return signature;
     } else if (
-      (this.provider as Web3Provider)._web3Provider.isMetaMask === true
+      (this.mainchainProvider as Web3Provider)._web3Provider.isMetaMask === true
     ) {
-      const walletAddress = await this.signingWallet.getAddress();
-      const signature: string = await this.provider.send(
+      const walletAddress = await this.mainchainSigningWallet.getAddress();
+      const signature: string = await this.mainchainProvider.send(
         "eth_signTypedData_v4",
         [walletAddress, JSON.stringify(payload)]
       );
       return signature;
     } else {
-      const walletAddress = await this.signingWallet.getAddress();
-      const signature: string = await this.provider.send("eth_signTypedData", [
-        walletAddress,
-        payload,
-      ]);
+      const walletAddress = await this.mainchainSigningWallet.getAddress();
+      const signature: string = await this.mainchainProvider.send(
+        "eth_signTypedData",
+        [walletAddress, payload]
+      );
       return signature;
     }
   }
@@ -670,11 +713,18 @@ class SportX implements ISportX {
 
 export async function newSportX(
   env: Environments,
+  sidechainProviderUrl: string,
   privateKey?: string,
-  providerUrl?: string,
-  provider?: providers.Web3Provider
+  mainchainProviderUrl?: string,
+  mainchainProvider?: providers.Web3Provider
 ) {
-  const sportX = new SportX(env, privateKey, providerUrl, provider);
+  const sportX = new SportX(
+    env,
+    sidechainProviderUrl,
+    privateKey,
+    mainchainProviderUrl,
+    mainchainProvider
+  );
   await sportX.init();
   return sportX;
 }

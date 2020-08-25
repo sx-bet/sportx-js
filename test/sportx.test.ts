@@ -23,6 +23,7 @@ import {
   convertToAPIPercentageOdds,
   convertToTrueTokenAmount
 } from "../src/utils/convert";
+import { getSidechainNetwork } from "../src/utils/networks";
 import daiArtifact from "./DAI.json";
 
 // tslint:disable no-string-literal
@@ -33,12 +34,16 @@ const TEST_MNEMONIC =
 describe("sportx", () => {
   let sportX: ISportX;
   const env: Environments = parseInt(process.env.ENVIRONMENT!, 10);
-  const daiAddress = TOKEN_ADDRESSES[Tokens.DAI][env];
-  const provider = new JsonRpcProvider(process.env.PROVIDER_URL);
+  const provider = new JsonRpcProvider(process.env.MAINCHAIN_PROVIDER_URL);
   const wallet = Wallet.fromMnemonic(TEST_MNEMONIC).connect(provider);
 
   before("should initialize", async () => {
-    sportX = await newSportX(env, wallet.privateKey, process.env.PROVIDER_URL);
+    sportX = await newSportX(
+      env,
+      process.env.SIDECHAIN_PROVIDER_URL!,
+      wallet.privateKey,
+      process.env.MAINCHAIN_PROVIDER_URL
+    );
   });
 
   it("should get metadata", async () => {
@@ -78,7 +83,7 @@ describe("sportx", () => {
         .add(1, "hour")
         .unix(),
       isMakerBettingOutcomeOne: true,
-      baseToken: daiAddress
+      baseToken: TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
     };
     const response = await sportX.newOrder(newOrder);
     expect(response.status).to.equal("success");
@@ -95,7 +100,7 @@ describe("sportx", () => {
         .add(1, "hour")
         .unix(),
       isMakerBettingOutcomeOne: true,
-      baseToken: daiAddress
+      baseToken: TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
     };
     const {
       data: { orders }
@@ -131,7 +136,7 @@ describe("sportx", () => {
       convertToTrueTokenAmount(10),
       false,
       wallet.address,
-      daiAddress
+      TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
     );
     expect(suggestions.status).to.equal("success");
   });
@@ -157,7 +162,7 @@ describe("sportx", () => {
       convertToTrueTokenAmount(10),
       true,
       wallet.address,
-      daiAddress
+      TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
     );
     const ordersToFill = orders.filter(order =>
       suggestions.data.orderHashes.includes(order.orderHash)
@@ -179,7 +184,7 @@ describe("sportx", () => {
       convertToTrueTokenAmount(10),
       true,
       wallet.address,
-      daiAddress
+      TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
     );
     const ordersToFill = orders.filter(order =>
       suggestions.data.orderHashes.includes(order.orderHash)
@@ -195,7 +200,7 @@ describe("sportx", () => {
       gasPrice: 2000000000,
       gasLimit: 100000,
       data,
-      to: daiAddress,
+      to: TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI],
       nonce,
       chainId: (await provider.getNetwork()).chainId
     };

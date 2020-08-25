@@ -1,4 +1,5 @@
 import { BigNumber } from "ethers/utils";
+import { Contract } from "ethers";
 
 export interface IContractOrder {
   marketHash: string;
@@ -51,4 +52,8 @@ export interface IFillObject {
 export interface ICancelDetails {
   message: string;
   orders: string[];
+}
+
+export interface IBaseTokenWrappers {
+  [address: string]: Contract;
 }
