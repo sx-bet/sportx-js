@@ -1,10 +1,9 @@
 import { Signer, utils } from "ethers";
-import { arrayify } from "ethers/utils";
+import { arrayify, hexlify } from "ethers/utils";
 import {
   ICancelDetails,
   IContractOrder,
-  IFillDetails,
-  IPermit
+  IFillDetails
 } from "../types/internal";
 import { IRelayerMakerOrder } from "../types/relayer";
 import { convertToContractOrder } from "./convert";
@@ -129,43 +128,41 @@ export function getFillOrderEIP712Payload(
   return payload;
 }
 
-export function getDaiPermitEIP712Payload(
-  details: IPermit,
+export function getMaticEip712Payload(
+  abiEncodedFunctionSig: string,
+  nonce: number,
+  from: string,
   chainId: number,
-  verifyingContract: string
+  verifyingContract: string,
+  domainName: string
 ) {
-  const payload = {
+  return {
     types: {
       EIP712Domain: [
         { name: "name", type: "string" },
         { name: "version", type: "string" },
-        { name: "chainId", type: "uint256" },
-        { name: "verifyingContract", type: "address" }
+        { name: "verifyingContract", type: "address" },
+        { name: "salt", type: "bytes32" }
       ],
-      Permit: [
-        { name: "holder", type: "address" },
-        { name: "spender", type: "address" },
+      MetaTransaction: [
         { name: "nonce", type: "uint256" },
-        { name: "expiry", type: "uint256" },
-        { name: "allowed", type: "bool" }
+        { name: "from", type: "address" },
+        { name: "functionSignature", type: "bytes" }
       ]
     },
-    primaryType: "Permit",
     domain: {
-      name: "Dai Stablecoin",
+      name: domainName,
       version: "1",
-      chainId,
+      salt: utils.hexZeroPad(hexlify(chainId), 32),
       verifyingContract
     },
     message: {
-      holder: details.holder,
-      spender: details.spender,
-      nonce: details.nonce,
-      expiry: details.expiry,
-      allowed: details.allowed
-    }
+      nonce,
+      from,
+      functionSignature: abiEncodedFunctionSig
+    },
+    primaryType: "MetaTransaction"
   };
-  return payload;
 }
 
 export function getCancelOrderEIP712Payload(

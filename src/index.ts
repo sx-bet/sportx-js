@@ -1,13 +1,13 @@
 export {
-  Environments,
-  RELAYER_TIMEOUT,
-  Tokens,
-  RELAYER_URLS,
-  TOKEN_TRANSFER_PROXY_ADDRESS,
-  TOKEN_ADDRESSES,
   EIP712_FILL_HASHER_ADDRESSES,
+  Environments,
+  FILL_ORDER_ADDRESS,
   RELAYER_HTTP_ENDPOINTS,
-  FILL_ORDER_ADDRESS
+  RELAYER_TIMEOUT,
+  RELAYER_URLS,
+  Tokens,
+  TOKEN_ADDRESSES,
+  TOKEN_TRANSFER_PROXY_ADDRESS,
 } from "./constants";
 export * from "./errors";
 export * from "./sportx";
@@ -20,4 +20,3 @@ export {
   convertToTakerPayAmount,
   convertToTrueTokenAmount,
 } from "./utils/convert";
-export { getDaiPermitEIP712Payload } from "./utils/signing";

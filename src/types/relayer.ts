@@ -1,4 +1,4 @@
-import { ICancelDetails, IApproveProxyPayload } from "./internal";
+import { ICancelDetails, IApproveSpenderPayload } from "./internal";
 
 export interface IRelayerMakerOrder {
   marketHash: string;
@@ -64,7 +64,7 @@ export interface IRelayerMetaFillOrderRequest {
   odds: string;
   returning: string;
   affiliateAddress?: string;
-  approveProxyPayload?: IApproveProxyPayload;
+  approveProxyPayload?: IApproveSpenderPayload;
 }
 
 export interface IDetailedRelayerMakerOrder extends ISignedRelayerMakerOrder {
@@ -104,6 +104,7 @@ export interface IMetadata {
     DAI: string;
     WETH: string;
   };
+  bettingEnabled: boolean;
 }
 
 export interface ILeague {

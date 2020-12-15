@@ -21,7 +21,7 @@ export interface IPermit {
   allowed: boolean;
 }
 
-export interface IApproveProxyPayload {
+export interface IApproveSpenderPayload {
   owner: string;
   spender: string;
   tokenAddress: string;

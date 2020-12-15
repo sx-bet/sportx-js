@@ -29,7 +29,7 @@ You can do the following things with this API:
 9. Get all active orders for an account
 10. Get pending or failed bets for a user
 11. Get past trades (graded/settled and ungraded/unsettled)
-12. Approve SportX contracts for DAI trading
+12. Approve SportX contracts trading
 13. Subscribe to market changes
 14. Subscribe to live scores by game
 15. Subscribe to order book changes by market
@@ -100,7 +100,7 @@ As a foreword the wrapper throws errors if parameters are bad, mismatched, or th
 
 ```typescript
 const activeMarkets = await sportX.getActiveMarkets();
-console.log(activeMarketsDai);
+console.log(activeMarkets);
 ```
 
 Which produces an **array** of objects with the following schema:
@@ -294,7 +294,7 @@ Example output:
 
 ### Submit a new order to a market
 
-_Note that to submit new orders you will first have to approve the SportX contracts for trading. See "Approve SportX contracts for DAI trading"_
+_Note that to submit new orders you will first have to approve the SportX contracts for trading. See "Approve SportX contracts for trading"_
 
 The odds in the API are all in a special implied format. For example, 2.0 (decimal) = 0.5 (implied). You'll need to convert your odds into implied in order to submit a new order to SportX. The odds you submit to place a new order on SportX are the odds you will receive as a bookmaker. Best explained with an example:
 
@@ -543,7 +543,7 @@ The following `APIError` error codes are possible for this endpoint:
 
 To actually fill orders on SportX, you will need the actual orders themselves which you can obtain from `getOrders()` as well as the amount(s) you want to fill each order.
 
-_Note that to submit orders you will first have to approve the SportX contracts for trading. See "Approve SportX contracts for DAI trading"_
+_Note that to submit orders you will first have to approve the SportX contracts for trading. See "Approve SportX contracts for trading"_
 
 The orders are filled meta style, meaning that the filler does not pay for gas and instead the user just signs an "intent to fill" hash. The API covers the gas fee.
 
@@ -797,14 +797,16 @@ Which produces unsettled trades like so:
 ]
 ```
 
-### Approve SportX contracts for DAI trading
+### Approve SportX contracts for trading
 
 Before you are able to fill orders or submit new orders, you need to approve the SportX contracts for trading. You can do this by simply calling:
 
 ```typescript
-const result = await sportX.approveSportXContractsDai();
+const result = await sportX.approveSportXContracts(tokenAddress);
 console.log(result);
 ```
+
+where `tokenAddress` is the address of the token you wish to bet in. 
 
 which produces:
 

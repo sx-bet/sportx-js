@@ -3,6 +3,7 @@ import fetch from "cross-fetch";
 import debug from "debug";
 import ethSigUtil from "eth-sig-util";
 import { Contract, providers, Signer, Wallet } from "ethers";
+import { MaxUint256 } from "ethers/constants";
 import { JsonRpcProvider, Web3Provider } from "ethers/providers";
 import {
   BigNumber,
@@ -10,14 +11,16 @@ import {
   isHexString,
   randomBytes,
 } from "ethers/utils";
+import queryString from "query-string";
 import { isArray, isBoolean } from "util";
 import ChildERC20 from "./artifacts/ChildERC20.json";
 import DAI from "./artifacts/DAI.json";
 import IERC20 from "./artifacts/IERC20.json";
 import {
+  DEFAULT_MATIC_RPL_URLS,
   EIP712_FILL_HASHER_ADDRESSES,
   Environments,
-  MainchainNetworks,
+  PublicNetworks,
   RELAYER_HTTP_ENDPOINTS,
   RELAYER_TIMEOUT,
   RELAYER_URLS,
@@ -29,12 +32,11 @@ import {
 import { APIError } from "./errors/api_error";
 import { APISchemaError } from "./errors/schema_error";
 import {
-  IApproveProxyPayload,
+  IApproveSpenderPayload,
   IBaseTokenWrappers,
   ICancelDetails,
   IFillDetails,
   IFillDetailsMetadata,
-  IPermit,
 } from "./types/internal";
 import {
   IDetailedRelayerMakerOrder,
@@ -60,8 +62,8 @@ import { tryParseJson } from "./utils/misc";
 import { getMainchainNetwork, getSidechainNetwork } from "./utils/networks";
 import {
   getCancelOrderEIP712Payload,
-  getDaiPermitEIP712Payload,
   getFillOrderEIP712Payload,
+  getMaticEip712Payload,
   getOrderHash,
   getOrderSignature,
 } from "./utils/signing";
@@ -80,7 +82,10 @@ export interface ISportX {
   getMetadata(): Promise<IMetadata>;
   getLeagues(): Promise<ILeague[]>;
   getSports(): Promise<ISport[]>;
-  getActiveMarkets(): Promise<IMarket[]>;
+  getActiveMarkets(
+    mainLinesOnly?: boolean,
+    eventId?: number
+  ): Promise<IMarket[]>;
   marketLookup(marketHashes: string[]): Promise<IMarket[]>;
   newOrder(order: INewOrder): Promise<IRelayerResponse>;
   cancelOrder(
@@ -99,8 +104,7 @@ export interface ISportX {
     orders: IRelayerMakerOrder[],
     takerAmounts: string[],
     fillDetailsMetadata?: IFillDetailsMetadata,
-    affiliateAddress?: string,
-    approveProxyPayload?: IApproveProxyPayload
+    affiliateAddress?: string
   ): Promise<IRelayerResponse>;
   suggestOrders(
     marketHash: string,
@@ -110,7 +114,7 @@ export interface ISportX {
     baseToken: string
   ): Promise<IRelayerResponse>;
   getTrades(tradeRequest: IGetTradesRequest): Promise<ITrade[]>;
-  approveSportXContractsDai(): Promise<IRelayerResponse>;
+  approveSportXContracts(token: string): Promise<IRelayerResponse>;
   getRealtimeConnection(): ably.Types.RealtimePromise;
   getEip712Signature(payload: any): Promise<string>;
 }
@@ -127,19 +131,21 @@ class SportX implements ISportX {
   private environment: Environments;
   private privateKey!: string;
   private mainchainChainId!: number;
-  private mainchainNetwork: MainchainNetworks;
+  private sidechainChainId!: number;
+  private mainchainNetwork: PublicNetworks;
   private sidechainNetwork: SidechainNetworks;
   private baseTokenWrappers: IBaseTokenWrappers = {};
 
   constructor(
     env: Environments,
-    sidechainProviderUrl: string,
+    customSidechainProviderUrl?: string,
     privateKey?: string,
     mainchainProviderUrl?: string,
     mainchainProvider?: providers.Web3Provider
   ) {
-    if (!sidechainProviderUrl) {
-      throw new Error(`sidechainProviderUrl not provided`);
+    let sidechainProviderUrl = DEFAULT_MATIC_RPL_URLS[env];
+    if (customSidechainProviderUrl) {
+      sidechainProviderUrl = customSidechainProviderUrl;
     }
     this.sidechainProvider = new JsonRpcProvider(sidechainProviderUrl);
     if (privateKey && !isHexString(privateKey)) {
@@ -190,6 +196,8 @@ class SportX implements ISportX {
     this.metadata = await this.getMetadata();
     const mainchainNetwork = await this.mainchainProvider.getNetwork();
     this.mainchainChainId = mainchainNetwork.chainId;
+    const sidechainNetwork = await this.sidechainProvider.getNetwork();
+    this.sidechainChainId = sidechainNetwork.chainId;
     Object.entries(TOKEN_ADDRESSES[this.mainchainNetwork]).forEach(
       ([symbol, address]) => {
         if (symbol === Tokens.DAI) {
@@ -257,11 +265,19 @@ class SportX implements ISportX {
     return data as ISport[];
   }
 
-  public async getActiveMarkets(): Promise<IMarket[]> {
+  public async getActiveMarkets(
+    mainLinesOnly?: boolean,
+    eventId?: number
+  ): Promise<IMarket[]> {
     this.debug("getActiveMarkets");
-    const response = await fetch(
-      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.ACTIVE_MARKETS}`
-    );
+    const qs = queryString.stringify({
+      ...(mainLinesOnly !== undefined && { onlyMainLine: mainLinesOnly }),
+      ...(eventId !== undefined && { eventId }),
+    });
+    const url = `${this.relayerUrl}${
+      RELAYER_HTTP_ENDPOINTS.ACTIVE_MARKETS
+    }?${qs}`;
+    const response = await fetch(url);
     const result = await this.tryParseResponse(
       response,
       "Can't fetch active markets"
@@ -405,8 +421,7 @@ class SportX implements ISportX {
     orders: ISignedRelayerMakerOrder[],
     takerAmounts: string[],
     fillDetailsMetadata?: IFillDetailsMetadata,
-    affiliateAddress?: string,
-    approveProxyPayload?: IApproveProxyPayload
+    affiliateAddress?: string
   ): Promise<IRelayerResponse> {
     this.debug("fillOrders");
     orders.forEach((order) => {
@@ -467,7 +482,6 @@ class SportX implements ISportX {
       fillSalt: fillSalt.toString(),
       ...finalFillDetailsMetadata,
       affiliateAddress,
-      approveProxyPayload,
     };
     this.debug("Meta fill payload");
     this.debug(payload);
@@ -487,7 +501,7 @@ class SportX implements ISportX {
 
   public async cancelOrder(orderHashes: string[], message?: string) {
     this.debug("cancelOrder");
-    if (!isArray(orderHashes)) {
+    if (!Array.isArray(orderHashes)) {
       throw new APISchemaError("orderHashes is not an array");
     }
     if (!orderHashes.every((hash) => isHexString(hash))) {
@@ -624,26 +638,29 @@ class SportX implements ISportX {
     return orders;
   }
 
-  public async approveSportXContractsDai() {
+  public async approveSportXContracts(token: string) {
     const walletAddress = await this.mainchainSigningWallet.getAddress();
-    const nonce: BigNumber = await this.baseTokenWrappers[
-      TOKEN_ADDRESSES[this.mainchainNetwork][Tokens.DAI]
-    ].nonces(walletAddress);
-    const details: IPermit = {
-      holder: walletAddress,
-      spender: TOKEN_TRANSFER_PROXY_ADDRESS[this.environment],
-      nonce: nonce.toNumber(),
-      expiry: 0,
-      allowed: true,
-    };
-    const signPayload = getDaiPermitEIP712Payload(
-      details,
-      this.mainchainChainId,
-      TOKEN_ADDRESSES[this.mainchainNetwork][Tokens.DAI]
+    const tokenContract = this.baseTokenWrappers[token];
+    const nonce: BigNumber = await tokenContract.getNonce(walletAddress);
+    const tokenName: string = await tokenContract.name();
+    const abiEncodedFunctionSig = tokenContract.interface.functions.approve.encode(
+      [TOKEN_TRANSFER_PROXY_ADDRESS[this.environment], MaxUint256]
     );
-    const signature = await this.getEip712Signature(signPayload);
-    const payload = {
-      ...details,
+
+    const signingPayload = getMaticEip712Payload(
+      abiEncodedFunctionSig,
+      nonce.toNumber(),
+      walletAddress,
+      this.sidechainChainId,
+      token,
+      tokenName
+    );
+    const signature = await this.getEip712Signature(signingPayload);
+    const payload: IApproveSpenderPayload = {
+      owner: walletAddress,
+      spender: TOKEN_TRANSFER_PROXY_ADDRESS[this.environment],
+      tokenAddress: token,
+      amount: MaxUint256.toString(),
       signature,
     };
     const response = await fetch(
@@ -658,9 +675,8 @@ class SportX implements ISportX {
     );
     const result = await this.tryParseResponse(
       response,
-      "Can't approx SportX contracts"
+      "Can't approve SportX contracts"
     );
-
     this.debug("Relayer response");
     this.debug(result);
     return result as IRelayerResponse;
@@ -713,10 +729,10 @@ class SportX implements ISportX {
 
 export async function newSportX(
   env: Environments,
-  sidechainProviderUrl: string,
   privateKey?: string,
   mainchainProviderUrl?: string,
-  mainchainProvider?: providers.Web3Provider
+  mainchainProvider?: providers.Web3Provider,
+  sidechainProviderUrl?: string,
 ) {
   const sportX = new SportX(
     env,
