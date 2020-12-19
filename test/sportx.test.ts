@@ -32,7 +32,7 @@ if (!process.env.MAINCHAIN_PROVIDER_URL) {
 }
 
 const testMarketHash =
-  "0xd6f8c2aa9da1a332cf77aa7c870ff53e2a37e0008e3fdfd4d307a426214247c0"; // CHANGE THIS TO MATCH A REAL MARKET
+  "0x6dad8a2e7d9ca9a2a097deea2efeaec67f82f8ec53222ae9c83312f7a284e9b6"; // CHANGE THIS TO MATCH A REAL MARKET
 
 describe("sportx", () => {
   let sportX: ISportX;
@@ -77,7 +77,7 @@ describe("sportx", () => {
     expect(activeMarkets.length).greaterThan(0);
   });
 
-  it("should make a new order", async () => {
+  it("should make a new orders", async () => {
     const newOrder: INewOrder = {
       marketHash: testMarketHash,
       totalBetSize: convertToTrueTokenAmount(10).toString(),
@@ -88,7 +88,17 @@ describe("sportx", () => {
       isMakerBettingOutcomeOne: true,
       baseToken: TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
     };
-    const response = await sportX.newOrder(newOrder);
+    const secondNewOrder: INewOrder = {
+      marketHash: testMarketHash,
+      totalBetSize: convertToTrueTokenAmount(10).toString(),
+      percentageOdds: convertToAPIPercentageOdds(0.5).toString(),
+      expiry: moment()
+        .add(1, "hour")
+        .unix(),
+      isMakerBettingOutcomeOne: true,
+      baseToken: TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
+    };
+    const response = await sportX.newOrder([newOrder, secondNewOrder]);
     expect(response.status).to.equal("success");
   });
 
@@ -105,7 +115,7 @@ describe("sportx", () => {
     };
     const {
       data: { orders }
-    } = await sportX.newOrder(newOrder);
+    } = await sportX.newOrder([newOrder]);
     const response = await sportX.cancelOrder(orders, "Cancel Orders");
     expect(response.status).to.equal("success");
   });
@@ -163,9 +173,11 @@ describe("sportx", () => {
     const ordersToFill = orders.filter(order =>
       suggestions.data.orderHashes.includes(order.orderHash)
     );
-    const fill = await sportX.fillOrders(ordersToFill, [
-      convertToTrueTokenAmount(10)
-    ]);
+    const fill = await sportX.fillOrders(
+      ordersToFill,
+      ordersToFill.map(o => convertToTrueTokenAmount(10))
+    );
+
     expect(fill.status).to.equal("success");
   });
 });

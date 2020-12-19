@@ -87,7 +87,7 @@ export interface ISportX {
     eventId?: number
   ): Promise<IMarket[]>;
   marketLookup(marketHashes: string[]): Promise<IMarket[]>;
-  newOrder(order: INewOrder): Promise<IRelayerResponse>;
+  newOrder(orders: INewOrder[]): Promise<IRelayerResponse>;
   cancelOrder(
     orderHashes: string[],
     message?: string
@@ -319,43 +319,49 @@ class SportX implements ISportX {
     return data as IMarket[];
   }
 
-  public async newOrder(order: INewOrder) {
+  public async newOrder(orders: INewOrder[]) {
     this.debug("newOrder");
-    const schemaValidation = validateINewOrderSchema(order);
-    if (schemaValidation !== "OK") {
-      throw new APISchemaError(schemaValidation);
-    }
-    const bigNumBetSize = bigNumberify(order.totalBetSize);
-    const salt = bigNumberify(randomBytes(32)).toString();
-    const apiMakerOrder: IRelayerMakerOrder = {
-      marketHash: order.marketHash,
-      maker: await this.mainchainSigningWallet.getAddress(),
-      totalBetSize: bigNumBetSize.toString(),
-      percentageOdds: order.percentageOdds,
-      expiry: order.expiry.toString(),
-      executor: this.metadata.executorAddress,
-      baseToken: order.baseToken,
-      salt,
-      isMakerBettingOutcomeOne: order.isMakerBettingOutcomeOne,
-    };
-    this.debug(`New order`);
-    this.debug(apiMakerOrder);
-    const signature = await getOrderSignature(
-      apiMakerOrder,
-      this.mainchainSigningWallet
+    const validation = orders.map(validateINewOrderSchema);
+    validation.forEach((val) => {
+      if (val !== "OK") {
+        throw new APISchemaError(val);
+      }
+    });
+    const walletAddress = await this.mainchainSigningWallet.getAddress();
+    const apiOrders = await Promise.all(
+      orders.map(async (order) => {
+        const bigNumBetSize = bigNumberify(order.totalBetSize);
+        const salt = bigNumberify(randomBytes(32)).toString();
+        const apiMakerOrder: IRelayerMakerOrder = {
+          marketHash: order.marketHash,
+          maker: walletAddress,
+          totalBetSize: bigNumBetSize.toString(),
+          percentageOdds: order.percentageOdds,
+          expiry: order.expiry.toString(),
+          executor: this.metadata.executorAddress,
+          baseToken: order.baseToken,
+          salt,
+          isMakerBettingOutcomeOne: order.isMakerBettingOutcomeOne,
+        };
+        const signature = await getOrderSignature(
+          apiMakerOrder,
+          this.mainchainSigningWallet
+        );
+        const signedApiMakerOrder: ISignedRelayerMakerOrder = {
+          ...apiMakerOrder,
+          signature,
+        };
+        return signedApiMakerOrder;
+      })
     );
-    this.debug(`New order signature: ${signature}`);
-    const signedApiMakerOrder: ISignedRelayerMakerOrder = {
-      ...apiMakerOrder,
-      signature,
-    };
-    this.debug(`New signed order`);
-    this.debug(signedApiMakerOrder);
+
+    this.debug(`New signed orders`);
+    this.debug(apiOrders);
     const response = await fetch(
       `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.NEW_ORDER}`,
       {
         method: "POST",
-        body: JSON.stringify({ orders: [signedApiMakerOrder] }),
+        body: JSON.stringify({ orders: apiOrders }),
         headers: { "Content-Type": "application/json" },
       }
     );
@@ -732,7 +738,7 @@ export async function newSportX(
   privateKey?: string,
   mainchainProviderUrl?: string,
   mainchainProvider?: providers.Web3Provider,
-  sidechainProviderUrl?: string,
+  sidechainProviderUrl?: string
 ) {
   const sportX = new SportX(
     env,
