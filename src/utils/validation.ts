@@ -1,6 +1,5 @@
-import { utils } from "ethers";
-import { Zero } from "ethers/constants";
-import { bigNumberify, isHexString } from "ethers/utils";
+import { isHexString } from "@ethersproject/bytes";
+import { BigNumber, constants, utils } from "ethers";
 import _ from "lodash";
 import moment from "moment";
 import { isBoolean } from "util";
@@ -145,7 +144,7 @@ export function validateIRelayerMakerOrder(order: IRelayerMakerOrder) {
   if (!isPositiveBigNumber(percentageOdds)) {
     return "percentageOdds as a number is not positive";
   }
-  const bigNumPercentageOdds = bigNumberify(percentageOdds);
+  const bigNumPercentageOdds = BigNumber.from(percentageOdds);
   if (bigNumPercentageOdds.gte(FRACTION_DENOMINATOR)) {
     return `percentageOdds must be less than ${FRACTION_DENOMINATOR.toString()}`;
   }
@@ -193,7 +192,7 @@ export function validateINewOrderSchema(order: INewOrder) {
   }
   if (
     !isPositiveBigNumber(order.percentageOdds) ||
-    bigNumberify(order.percentageOdds).gte(convertToAPIPercentageOdds(1))
+    BigNumber.from(order.percentageOdds).gte(convertToAPIPercentageOdds(1))
   ) {
     return "impliedOdds must be between 0 and 1 exclusive.";
   }
@@ -216,8 +215,8 @@ export function validateINewOrderSchema(order: INewOrder) {
  */
 export function isPositiveBigNumber(object: any): boolean {
   try {
-    const bigNumber = bigNumberify(object);
-    return bigNumber.gt(Zero);
+    const bigNumber = BigNumber.from(object);
+    return bigNumber.gt(constants.Zero);
   } catch (e) {
     return false;
   }

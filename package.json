@@ -7,7 +7,7 @@
     "cross-fetch": "^3.0.4",
     "debug": "^4.1.1",
     "eth-sig-util": "^2.5.2",
-    "ethers": "4.0.47",
+    "ethers": "^5.2.0",
     "lodash": "^4.17.15",
     "moment": "^2.24.0",
     "query-string": "^6.9.0"
@@ -60,7 +60,7 @@
     "compile": "tsc",
     "lint": "tslint -c tslint.json src/**/*.ts",
     "test": "rm -rf dist/ && tsc && mocha \"dist/test/*.js\" --timeout 120000 --exit --bail",
-    "format": "tslint --fix -c tslint.json test/**/*.ts && prettier --write test/**/*.ts src/**/*.ts"
+    "format": "tslint --fix -c tslint.json 'test/**/*.ts' && prettier --write 'test/**/*.ts' 'src/**/*.ts'"
   },
   "lint-staged": {
     "src/**/*.ts": [

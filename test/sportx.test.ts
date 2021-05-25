@@ -1,7 +1,6 @@
+import { parseUnits } from "@ethersproject/units";
 import { expect } from "chai";
-import { Wallet } from "ethers";
-import { JsonRpcProvider } from "ethers/providers";
-import { parseUnits } from "ethers/utils";
+import { providers, Wallet } from "ethers";
 import "mocha";
 import moment from "moment";
 import { INewOrder, IPendingBetsRequest } from "../src";
@@ -37,7 +36,7 @@ const testMarketHash =
 describe("sportx", () => {
   let sportX: ISportX;
   const env: Environments = process.env.ENVIRONMENT as Environments;
-  const provider = new JsonRpcProvider(DEFAULT_MATIC_RPL_URLS[env]);
+  const provider = new providers.JsonRpcProvider(DEFAULT_MATIC_RPL_URLS[env]);
   const wallet = Wallet.fromMnemonic(TEST_MNEMONIC).connect(provider);
 
   before("should initialize", async () => {
@@ -80,7 +79,10 @@ describe("sportx", () => {
   it("should make a new orders", async () => {
     const newOrder: INewOrder = {
       marketHash: testMarketHash,
-      totalBetSize: convertToTrueTokenAmount(10).toString(),
+      totalBetSize: convertToTrueTokenAmount(
+        10,
+        TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
+      ).toString(),
       percentageOdds: convertToAPIPercentageOdds(0.5).toString(),
       expiry: moment()
         .add(1, "hour")
@@ -90,7 +92,10 @@ describe("sportx", () => {
     };
     const secondNewOrder: INewOrder = {
       marketHash: testMarketHash,
-      totalBetSize: convertToTrueTokenAmount(10).toString(),
+      totalBetSize: convertToTrueTokenAmount(
+        10,
+        TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
+      ).toString(),
       percentageOdds: convertToAPIPercentageOdds(0.5).toString(),
       expiry: moment()
         .add(1, "hour")
@@ -105,7 +110,10 @@ describe("sportx", () => {
   it("should cancel an order", async () => {
     const newOrder: INewOrder = {
       marketHash: testMarketHash,
-      totalBetSize: parseUnits("10", 18).toString(),
+      totalBetSize: parseUnits(
+        "10",
+        TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
+      ).toString(),
       percentageOdds: convertToAPIPercentageOdds(0.5).toString(),
       expiry: moment()
         .add(1, "hour")
@@ -141,7 +149,10 @@ describe("sportx", () => {
   it("should suggest orders", async () => {
     const suggestions = await sportX.suggestOrders(
       testMarketHash,
-      convertToTrueTokenAmount(10),
+      convertToTrueTokenAmount(
+        10,
+        TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
+      ),
       false,
       wallet.address,
       TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
@@ -165,7 +176,10 @@ describe("sportx", () => {
     const orders = await sportX.getOrders([testMarketHash]);
     const suggestions = await sportX.suggestOrders(
       testMarketHash,
-      convertToTrueTokenAmount(10),
+      convertToTrueTokenAmount(
+        10,
+        TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
+      ),
       true,
       wallet.address,
       TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
@@ -175,7 +189,12 @@ describe("sportx", () => {
     );
     const fill = await sportX.fillOrders(
       ordersToFill,
-      ordersToFill.map(o => convertToTrueTokenAmount(10))
+      ordersToFill.map(o =>
+        convertToTrueTokenAmount(
+          10,
+          TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
+        )
+      )
     );
 
     expect(fill.status).to.equal("success");
