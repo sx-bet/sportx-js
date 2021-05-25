@@ -1,5 +1,4 @@
-import { BigNumber } from "ethers/utils";
-import { Contract } from "ethers";
+import { BigNumber, Contract } from "ethers";
 
 export interface IContractOrder {
   marketHash: string;
