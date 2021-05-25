@@ -36,31 +36,23 @@ You can do the following things with this API:
 16. Subscribe to active orders
 17. Lookup markets
 
-We support betting in DAI, WETH, and USDC
+We support betting in DAI or WETH.
 
 In any case, to get started, you can either initialize via your ethereum private key or initialize via an existing web3 instance. Examples below assuming you are using environment variables to store sensitive information.
 
 ### Initializing via ethereum private key
 
-For this you will need a URL of an Ethereum provider to connect to the network along with your Ethereum private key. You can get a dedicated URL at https://infura.io. Note that the provider URL should connect to the mainchain and not the polygon chain. So if the environment is "MUMBAI", the provider URL should point to goerli. If the environment is "PRODUCTION", the provider URL should point to ETH mainnet. 
+For this you will need a URL of an Ethereum provider to connect to the network along with your Ethereum private key. You can get a dedicated URL at https://infura.io. _Ensure that the provider matches the specified environment. i.e., don't use a rinkeby provider for mainnet._
 
 ```typescript
 import { Environments, newSportX } from "@sportx-bet/sportx-js";
 
 async function main() {
   const sportX = await newSportX(
-    Environments.PRODUCTION,
+    Environments.RINKEBY,
     process.env.ETHEREUM_PRIVATE_KEY,
-    process.env.ETH_MAINNET_PROVIDER_URL
+    process.env.PROVIDER_URL
   );
-
-  // or
-
-  const sportXmumbai = await newSportX(
-    Environments.MUMBAI,
-    process.env.ETHEREUM_PRIVATE_KEY,
-    process.env.GOERLI_PROVIDER_URL
-  )
 }
 ```
 
@@ -74,7 +66,7 @@ import { providers } from "ethers";
 
 async function main() {
   const sportX = await newSportX(
-    Environments.MUMBAI,
+    Environments.RINKEBY,
     undefined,
     undefined,
     new providers.Web3Provider(web3.currentProvider)
@@ -408,7 +400,7 @@ If it failed, it will throw an `APISchemaError` or `APIError`.
 
 The following `APIError` error codes are possible for this endpoint:
 
-- `ORDERS_DONT_EXIST` - The orders you are cancelling no longer exist.
+- `ORDERS_DONT_EIXST` - The orders you are cancelling no longer exist.
 
 You can supply a second parameter if you wish to show a message to the user (if you are a user-facing application) as this is using `eth_signTypedData` behind the scenes. For example you could pass the string "Cancel orders":
 
@@ -599,6 +591,8 @@ Which produces, if successful:
 ```
 
 This hash is a transaction hash for the actual ethereum transaction which you can track. Note that this might not be the final transaction! Depending on gas prices, the SportX relayer will retry to submit the bet until it is successful. However, at this point, the bet is confirmed.
+
+If you are an affiliate, you can pass your affiliate address as the last parameter `affiliateAddress` (after registering with SportX - please email [mailto](mailto:contact@sportx.bet) to register) to ensure you are paid out the affiliate fee when the bet is settled.
 
 If you wish to submit an approval transaction for an amount of at least the bet amount to the ERC20 token (instead of providing unlimited allowance to the SportX smart contracts) prior, you can craft the transaction, use `eth_signTransaction` to sign it, and submit the encoded version as the `approvalTx` parameter. On the backend, we will relayer the transaction for you, but provide you with an instant (optimistic) confirmation.
 
@@ -973,3 +967,7 @@ We use https://www.npmjs.com/package/debug to provide debugging support for cons
 `export DEBUG=sportx-js`
 
 and you will see raw responses from the SportX relayer.
+
+## Realtime specific debugging
+
+We use a third party service called ably that

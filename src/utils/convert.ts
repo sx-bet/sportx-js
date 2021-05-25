@@ -1,27 +1,30 @@
 import { BigNumber } from "bignumber.js";
 import {
+  BigNumber as EthBigNumber,
+  bigNumberify,
+  formatUnits,
+  parseUnits
+} from "ethers/utils";
+import {
   FRACTION_DENOMINATOR,
-  PERCENTAGE_PRECISION_EXPONENT,
-  TokenDecimalMapping
+  PERCENTAGE_PRECISION_EXPONENT
 } from "../constants";
 import { IContractOrder } from "../types/internal";
-import { BigNumber as EthBigNumber } from "ethers";
 import { IRelayerMakerOrder } from "../types/relayer";
-import { formatUnits, parseUnits } from "@ethersproject/units";
 
 export function convertToAPIPercentageOdds(decimal: number): EthBigNumber {
   if (decimal < 0 || decimal > 1) {
     throw new Error(`${decimal} not in valid range. Must be between 0 and 1`);
   }
   const protocolBigNum = decimal * Math.pow(10, 20);
-  return EthBigNumber.from(protocolBigNum.toString());
+  return bigNumberify(protocolBigNum.toString());
 }
 
 export function convertFromAPIPercentageOdds(odds: string): number {
-  const apiPercentageOdds = EthBigNumber.from(odds);
+  const apiPercentageOdds = bigNumberify(odds);
   if (apiPercentageOdds.gt(FRACTION_DENOMINATOR)) {
     throw new Error(
-      `Invalid api percentage odds. ${apiPercentageOdds} greater than ${EthBigNumber.from(
+      `Invalid api percentage odds. ${apiPercentageOdds} greater than ${bigNumberify(
         10
       )
         .pow(PERCENTAGE_PRECISION_EXPONENT)
@@ -40,26 +43,23 @@ export function convertToContractOrder(
 ): IContractOrder {
   return {
     ...order,
-    totalBetSize: EthBigNumber.from(order.totalBetSize),
-    percentageOdds: EthBigNumber.from(order.percentageOdds),
-    expiry: EthBigNumber.from(order.expiry),
+    totalBetSize: bigNumberify(order.totalBetSize),
+    percentageOdds: bigNumberify(order.percentageOdds),
+    expiry: bigNumberify(order.expiry),
     baseToken: order.baseToken,
-    salt: EthBigNumber.from(order.salt)
+    salt: bigNumberify(order.salt)
   };
 }
-export function convertToTrueTokenAmount(amount: number, baseToken: string) {
-  return parseUnits(
-    amount.toString(),
-    TokenDecimalMapping[baseToken]
-  ).toString();
+export function convertToTrueTokenAmount(amount: number) {
+  return parseUnits(amount.toString(), 18).toString();
 }
 
-export function convertToDisplayAmount(amount: string, baseToken: string) {
-  return formatUnits(amount, TokenDecimalMapping[baseToken]);
+export function convertToDisplayAmount(amount: string) {
+  return formatUnits(amount, 18);
 }
 
 export function convertToTakerPayAmount(amount: string, odds: EthBigNumber) {
-  return EthBigNumber.from(amount)
+  return bigNumberify(amount)
     .mul(odds)
     .div(FRACTION_DENOMINATOR.sub(odds));
 }
