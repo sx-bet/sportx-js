@@ -1,13 +1,13 @@
+import { formatUnits, parseUnits } from "@ethersproject/units";
 import { BigNumber } from "bignumber.js";
+import { BigNumber as EthBigNumber } from "ethers";
 import {
   FRACTION_DENOMINATOR,
   PERCENTAGE_PRECISION_EXPONENT,
   TokenDecimalMapping
 } from "../constants";
 import { IContractOrder } from "../types/internal";
-import { BigNumber as EthBigNumber } from "ethers";
 import { IRelayerMakerOrder } from "../types/relayer";
-import { formatUnits, parseUnits } from "@ethersproject/units";
 
 export function convertToAPIPercentageOdds(decimal: number): EthBigNumber {
   if (decimal < 0 || decimal > 1) {

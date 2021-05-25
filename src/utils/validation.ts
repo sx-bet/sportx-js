@@ -8,9 +8,9 @@ import { IFillDetailsMetadata } from "../types/internal";
 import {
   IGetTradesRequest,
   INewOrder,
+  IPendingBetsRequest,
   IRelayerMakerOrder,
-  ISignedRelayerMakerOrder,
-  IPendingBetsRequest
+  ISignedRelayerMakerOrder
 } from "../types/relayer";
 import { convertToAPIPercentageOdds } from "./convert";
 

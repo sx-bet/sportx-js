@@ -25,9 +25,9 @@ import {
   RELAYER_TIMEOUT,
   RELAYER_URLS,
   SidechainNetworks,
-  Tokens,
   TOKEN_ADDRESSES,
-  TOKEN_TRANSFER_PROXY_ADDRESS
+  TOKEN_TRANSFER_PROXY_ADDRESS,
+  Tokens
 } from "./constants";
 import { APIError } from "./errors/api_error";
 import { APISchemaError } from "./errors/schema_error";
@@ -690,7 +690,7 @@ class SportX implements ISportX {
     return result as IRelayerResponse;
   }
 
-  async getEip712Signature(payload: any) {
+  public async getEip712Signature(payload: any) {
     if (this.privateKey) {
       const bufferPrivateKey = Buffer.from(this.privateKey.substring(2), "hex");
       const signature: string = (ethSigUtil as any).signTypedData_v4(
