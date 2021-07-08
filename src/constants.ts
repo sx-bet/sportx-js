@@ -30,7 +30,7 @@ export enum Tokens {
 }
 
 export const RELAYER_URLS = {
-  [Environments.MUMBAI]: "http://localhost:8080",
+  [Environments.MUMBAI]: "https://mumbai.api.sportx.bet",
   [Environments.PRODUCTION]: "https://app.api.sportx.bet"
 };
 
