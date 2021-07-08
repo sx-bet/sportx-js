@@ -71,9 +71,31 @@ describe("sportx", () => {
     expect(sports.length).greaterThan(0);
   });
 
+  it("should get popular markets", async () => {
+    await sportX.getPopularMarkets();
+  });
+
+  it("should get active leagues", async () => {
+    await sportX.getActiveLeagues();
+  });
+
+  it("should get live scores", async () => {
+    await sportX.getLiveScores(["L7187811"])
+  })
+
   it("should get active markets", async () => {
     const activeMarkets = await sportX.getActiveMarkets();
     expect(activeMarkets.length).greaterThan(0);
+  });
+
+  it("should get active markets with parameters", async () => {
+    await sportX.getActiveMarkets(
+      undefined,
+      undefined,
+      "1",
+      undefined,
+      "game-lines"
+    );
   });
 
   it("should make a new orders", async () => {

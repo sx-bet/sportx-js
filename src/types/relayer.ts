@@ -114,6 +114,34 @@ export interface ILeague {
   homeTeamFirst: boolean;
 }
 
+export interface ILiveScore {
+  currentPeriod: string,
+  extra: string,
+  leagueId: number
+  periodTime: string,
+  periods: IPeriod[],
+  sportId: number,
+  teamOneScore: number,
+  teamTwoScore: number,
+  updatedAt: string,
+  sportXeventId: string
+}
+
+export interface IPeriod {
+  label: string,
+  isFinished: boolean,
+  teamOneScore: string,
+  teamTwoScore: string
+}
+
+export interface IActiveLeague {
+  leagueId: number;
+  label: string;
+  sportId: number;
+  homeTeamFirst: boolean;
+  eventsByType: { [group: string]: number };
+}
+
 export interface ISport {
   sportId: number;
   label: string;
@@ -181,5 +209,9 @@ export interface IMarket {
   sportId: number;
   leagueId: number;
   homeTeamFirst: boolean;
-  leagueLabel?: string;
+  leagueLabel: string;
+  mainLine?: boolean;
+  group1: string;
+  group2?: string;
+  group3?: string;
 }
