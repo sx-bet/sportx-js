@@ -90,18 +90,22 @@ export const EIP712_FILL_HASHER_ADDRESSES = {
 export const RELAYER_HTTP_ENDPOINTS = {
   SPORTS: "/sports",
   LEAGUES: "/leagues",
+  ACTIVE_LEAGUES: "/leagues/active",
   ACTIVE_ORDERS: "/active-orders",
   ORDERS: "/orders",
   PENDING_BETS: "/pending-bets",
   METADATA: "/metadata",
   ACTIVE_MARKETS: "/markets/active",
+  POPULAR: "/markets/popular",
   HISTORICAL_MARKETS: "/markets/find",
   NEW_ORDER: "/orders/new",
   SUGGEST_ORDERS: "/orders/suggest",
   FILL_ORDERS: "/orders/fill",
   CANCEL_ORDERS: "/orders/cancel",
   TRADES: "/trades",
-  DAI_APPROVAL: "/user/approve-proxy"
+  DAI_APPROVAL: "/user/approve-proxy",
+  USER_TOKEN: "/user/token",
+  LIVE_SCORES: "/live-scores"
 };
 
 export const TokenDecimalMapping: { [address: string]: number } = {

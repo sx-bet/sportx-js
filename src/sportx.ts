@@ -39,9 +39,11 @@ import {
   IFillDetailsMetadata
 } from "./types/internal";
 import {
+  IActiveLeague,
   IDetailedRelayerMakerOrder,
   IGetTradesRequest,
   ILeague,
+  ILiveScore,
   IMarket,
   IMetadata,
   INewOrder,
@@ -82,10 +84,15 @@ export interface ISportX {
   getMetadata(): Promise<IMetadata>;
   getLeagues(): Promise<ILeague[]>;
   getSports(): Promise<ISport[]>;
+  getActiveLeagues(): Promise<ILeague[]>;
   getActiveMarkets(
     mainLinesOnly?: boolean,
-    eventId?: number
+    eventId?: number,
+    leagueId?: string,
+    liveOnly?: boolean,
+    betGroup?: string
   ): Promise<IMarket[]>;
+  getPopularMarkets(): Promise<IMarket[]>;
   marketLookup(marketHashes: string[]): Promise<IMarket[]>;
   newOrder(orders: INewOrder[]): Promise<IRelayerResponse>;
   cancelOrder(
@@ -117,6 +124,7 @@ export interface ISportX {
   approveSportXContracts(token: string): Promise<IRelayerResponse>;
   getRealtimeConnection(): ably.Types.RealtimePromise;
   getEip712Signature(payload: any): Promise<string>;
+  getLiveScores(eventIds: string[]): Promise<ILiveScore[]>
 }
 
 class SportX implements ISportX {
@@ -180,6 +188,20 @@ class SportX implements ISportX {
     this.sidechainNetwork = getSidechainNetwork(this.environment);
   }
 
+  public async getPopularMarkets() {
+    this.debug("getPopularMarkets");
+    const url = `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.POPULAR}`;
+    const response = await fetch(url);
+    const result = await this.tryParseResponse(
+      response,
+      "Can't fetch active markets"
+    );
+    this.debug("Relayer response");
+    this.debug(result);
+    const { data } = result;
+    return data as IMarket[];
+  }
+
   public getRealtimeConnection(): ably.Types.RealtimePromise {
     return this.ably;
   }
@@ -189,7 +211,7 @@ class SportX implements ISportX {
       throw new Error("Already initialized");
     }
     this.ably = new ably.Realtime.Promise({
-      authUrl: `${this.relayerUrl}/user/token`
+      authUrl: `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.USER_TOKEN}`
     });
     await new Promise<void>((resolve, reject) => {
       this.ably.connection.on("connected", () => {
@@ -232,6 +254,18 @@ class SportX implements ISportX {
     this.debug("Initialized");
   }
 
+  public async getActiveLeagues() {
+    this.debug("getLeagues");
+    const response = await fetch(
+      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.ACTIVE_LEAGUES}`
+    );
+    const result = await this.tryParseResponse(response, "Can't fetch leagues");
+    this.debug("Relayer response");
+    this.debug(result);
+    const { data } = result;
+    return data as IActiveLeague[];
+  }
+
   public async getMetadata(): Promise<IMetadata> {
     this.debug("getMetadata");
     const response = await fetch(
@@ -269,14 +303,46 @@ class SportX implements ISportX {
     return data as ISport[];
   }
 
+  public async getLiveScores(eventIds: string[]) {
+    this.debug("getLiveScores");
+    if (
+      !Array.isArray(eventIds) ||
+      !eventIds.every(eventId => typeof eventId === "string")
+    ) {
+      throw new APISchemaError("eventIds is not an array of strings");
+    }
+    const response = await fetch(
+      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.LIVE_SCORES}`,
+      {
+        method: "POST",
+        body: JSON.stringify({sportXEventIds: eventIds}),
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+    const result = await this.tryParseResponse(
+      response,
+      "Can't get live scores"
+    );
+    this.debug("Relayer response");
+    this.debug(result);
+    const { data } = result;
+    return data as ILiveScore[];
+  }
+
   public async getActiveMarkets(
     mainLinesOnly?: boolean,
-    eventId?: number
+    eventId?: number,
+    leagueId?: string,
+    liveOnly?: boolean,
+    betGroup?: string
   ): Promise<IMarket[]> {
     this.debug("getActiveMarkets");
     const qs = queryString.stringify({
       ...(mainLinesOnly !== undefined && { onlyMainLine: mainLinesOnly }),
-      ...(eventId !== undefined && { eventId })
+      ...(leagueId !== undefined && { leagueId }),
+      ...(eventId !== undefined && { eventId }),
+      ...(liveOnly !== undefined && { liveOnly }),
+      ...(betGroup !== undefined && { betGroup })
     });
     const url = `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.ACTIVE_MARKETS}?${qs}`;
     const response = await fetch(url);
