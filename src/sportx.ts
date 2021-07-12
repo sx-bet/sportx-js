@@ -124,7 +124,7 @@ export interface ISportX {
   approveSportXContracts(token: string): Promise<IRelayerResponse>;
   getRealtimeConnection(): ably.Types.RealtimePromise;
   getEip712Signature(payload: any): Promise<string>;
-  getLiveScores(eventIds: string[]): Promise<ILiveScore[]>
+  getLiveScores(eventIds: string[]): Promise<ILiveScore[]>;
 }
 
 class SportX implements ISportX {
@@ -315,7 +315,7 @@ class SportX implements ISportX {
       `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.LIVE_SCORES}`,
       {
         method: "POST",
-        body: JSON.stringify({sportXEventIds: eventIds}),
+        body: JSON.stringify({ sportXEventIds: eventIds }),
         headers: { "Content-Type": "application/json" }
       }
     );

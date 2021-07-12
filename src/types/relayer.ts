@@ -85,26 +85,29 @@ export interface IRelayerResponse {
 export interface IMetadata {
   executorAddress: string;
   oracleFees: {
-    DAI: string;
-    WETH: string;
+    [token: string]: string;
   };
   sportXAffiliate: {
     address: string;
     amount: string;
   };
   makerOrderMinimums: {
-    DAI: string;
-    WETH: string;
+    [token: string]: string;
   };
   takerMinimums: {
-    DAI: string;
-    WETH: string;
+    [token: string]: string;
   };
   addresses: {
-    DAI: string;
-    WETH: string;
+    [network: string]: { [token: string]: string };
   };
   bettingEnabled: boolean;
+  depositMinimums: {
+    [token: string]: string;
+  };
+  withdrawMinimums: {
+    [token: string]: string;
+  };
+  totalVolume: number;
 }
 
 export interface ILeague {
@@ -115,23 +118,23 @@ export interface ILeague {
 }
 
 export interface ILiveScore {
-  currentPeriod: string,
-  extra: string,
-  leagueId: number
-  periodTime: string,
-  periods: IPeriod[],
-  sportId: number,
-  teamOneScore: number,
-  teamTwoScore: number,
-  updatedAt: string,
-  sportXeventId: string
+  currentPeriod: string;
+  extra: string;
+  leagueId: number;
+  periodTime: string;
+  periods: IPeriod[];
+  sportId: number;
+  teamOneScore: number;
+  teamTwoScore: number;
+  updatedAt: string;
+  sportXeventId: string;
 }
 
 export interface IPeriod {
-  label: string,
-  isFinished: boolean,
-  teamOneScore: string,
-  teamTwoScore: string
+  label: string;
+  isFinished: boolean;
+  teamOneScore: string;
+  teamTwoScore: string;
 }
 
 export interface IActiveLeague {

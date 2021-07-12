@@ -80,8 +80,8 @@ describe("sportx", () => {
   });
 
   it("should get live scores", async () => {
-    await sportX.getLiveScores(["L7187811"])
-  })
+    await sportX.getLiveScores(["L7187811"]);
+  });
 
   it("should get active markets", async () => {
     const activeMarkets = await sportX.getActiveMarkets();
