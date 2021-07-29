@@ -43,7 +43,9 @@ describe("sportx", () => {
     sportX = await newSportX(
       env,
       wallet.privateKey,
-      process.env.MAINCHAIN_PROVIDER_URL
+      process.env.MAINCHAIN_PROVIDER_URL,
+      undefined,
+      process.env.SIDECHAIN_PROVIDER_URL
     );
     await sportX.approveSportXContracts(
       TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
