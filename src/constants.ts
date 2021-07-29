@@ -40,7 +40,7 @@ export const DEFAULT_MATIC_RPL_URLS = {
 };
 
 export const TOKEN_TRANSFER_PROXY_ADDRESS = {
-  [Environments.MUMBAI]: "0xE667fa04A0F6Ff910Ff8b6889fC49b80585864D3",
+  [Environments.MUMBAI]: "0x2D583ba47b54C1C60401eeA5508aCb8c935288C6",
   [Environments.PRODUCTION]: "0xa6EA1Ed4aeC85dF277fae3512f8a6cbb40c1Fe7e"
 };
 
@@ -51,6 +51,13 @@ interface IStringObj {
 interface INestedStringObj {
   [env: string]: IStringObj;
 }
+
+export const CHAIN_IDS = {
+  [PublicNetworks.GOERLI]: 5,
+  [PublicNetworks.MAIN]: 1,
+  [SidechainNetworks.MAIN_MATIC]: 137,
+  [SidechainNetworks.MUMBAI_MATIC]: 80001
+};
 
 export const TOKEN_ADDRESSES: INestedStringObj = {
   [SidechainNetworks.MUMBAI_MATIC]: {
