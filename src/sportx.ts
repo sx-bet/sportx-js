@@ -17,6 +17,7 @@ import ChildERC20 from "./artifacts/ChildERC20.json";
 import DAI from "./artifacts/DAI.json";
 import IERC20 from "./artifacts/IERC20.json";
 import {
+  CHAIN_IDS,
   DEFAULT_MATIC_RPL_URLS,
   EIP712_FILL_HASHER_ADDRESSES,
   Environments,
@@ -111,7 +112,8 @@ export interface ISportX {
     orders: IRelayerMakerOrder[],
     takerAmounts: string[],
     fillDetailsMetadata?: IFillDetailsMetadata,
-    affiliateAddress?: string
+    affiliateAddress?: string,
+    approveProxyPayload?: IApproveSpenderPayload
   ): Promise<IRelayerResponse>;
   suggestOrders(
     marketHash: string,
@@ -224,6 +226,7 @@ class SportX implements ISportX {
     this.mainchainChainId = mainchainNetwork.chainId;
     const sidechainNetwork = await this.sidechainProvider.getNetwork();
     this.sidechainChainId = sidechainNetwork.chainId;
+    this.verifyChainIds();
     Object.entries(TOKEN_ADDRESSES[this.mainchainNetwork]).forEach(
       ([symbol, address]) => {
         if (symbol === Tokens.DAI) {
@@ -495,7 +498,8 @@ class SportX implements ISportX {
     orders: ISignedRelayerMakerOrder[],
     takerAmounts: string[],
     fillDetailsMetadata?: IFillDetailsMetadata,
-    affiliateAddress?: string
+    affiliateAddress?: string,
+    approveProxyPayload?: IApproveSpenderPayload
   ): Promise<IRelayerResponse> {
     this.debug("fillOrders");
     orders.forEach(order => {
@@ -547,6 +551,8 @@ class SportX implements ISportX {
       this.mainchainChainId,
       EIP712_FILL_HASHER_ADDRESSES[this.environment]
     );
+    this.debug(`EIP712 payload`);
+    this.debug(fillOrderPayload);
     const takerSignature = await this.getEip712Signature(fillOrderPayload);
     const payload: IRelayerMetaFillOrderRequest = {
       orderHashes,
@@ -555,8 +561,13 @@ class SportX implements ISportX {
       takerSig: takerSignature,
       fillSalt: fillSalt.toString(),
       ...finalFillDetailsMetadata,
-      affiliateAddress
+      affiliateAddress,
+      approveProxyPayload
     };
+    if (approveProxyPayload) {
+      this.debug(`approveProxyPayload`);
+      this.debug(approveProxyPayload);
+    }
     this.debug("Meta fill payload");
     this.debug(payload);
     const response = await fetch(
@@ -797,6 +808,32 @@ class SportX implements ISportX {
       throw new APIError(undefined, `Can't parse JSON ${textResponse}`);
     } else {
       return result;
+    }
+  }
+
+  private verifyChainIds() {
+    if (this.environment === Environments.PRODUCTION) {
+      if (this.mainchainChainId !== CHAIN_IDS[PublicNetworks.MAIN]) {
+        throw new Error(
+          `Incorrect mainchain chain ID for production environment. Are you sure the passed mainchain provider is pointing to ETH mainnet?`
+        );
+      }
+      if (this.sidechainChainId !== CHAIN_IDS[SidechainNetworks.MAIN_MATIC]) {
+        throw new Error(
+          `Incorrect sidechain chain ID for production environment. Are you sure the passed sidechain provider is pointing to Polygon mainnet?`
+        );
+      }
+    } else if (this.environment === Environments.MUMBAI) {
+      if (this.mainchainChainId !== CHAIN_IDS[PublicNetworks.GOERLI]) {
+        throw new Error(
+          `Incorrect mainchain chain ID for mumbai environment. Are you sure the passed mainchain provider is pointing to Goerli?`
+        );
+      }
+      if (this.sidechainChainId !== CHAIN_IDS[SidechainNetworks.MUMBAI_MATIC]) {
+        throw new Error(
+          `Incorrect sidechain chain ID for mumbai environment. Are you sure the passed sidechain provider is pointing to Mumbai?`
+        );
+      }
     }
   }
 }
