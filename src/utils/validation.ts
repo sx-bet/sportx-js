@@ -1,7 +1,6 @@
 import { isHexString } from "@ethersproject/bytes";
 import { BigNumber, constants, utils } from "ethers";
 import _ from "lodash";
-import moment from "moment";
 import { isBoolean } from "util";
 import { FRACTION_DENOMINATOR } from "../constants";
 import { IFillDetailsMetadata } from "../types/internal";
@@ -148,7 +147,8 @@ export function validateIRelayerMakerOrder(order: IRelayerMakerOrder) {
   if (bigNumPercentageOdds.gte(FRACTION_DENOMINATOR)) {
     return `percentageOdds must be less than ${FRACTION_DENOMINATOR.toString()}`;
   }
-  if (moment.unix(parseInt(expiry, 10)).isBefore(moment())) {
+  // What validates that expiry isn't a NaN?
+  if (parseInt(expiry, 10) < Date.now() / 1000) {
     return "expiry before current time.";
   }
   if (!isAddress(executor)) {
@@ -184,7 +184,7 @@ export function validateINewOrderSchema(order: INewOrder) {
   if (!_.isNumber(order.expiry) || order.expiry < 0) {
     return "Expiry undefined or malformed.";
   }
-  if (moment.unix(order.expiry).isBefore(moment())) {
+  if (order.expiry < Date.now() / 1000) {
     return "Expiry before current time.";
   }
   if (!isPositiveBigNumber(order.totalBetSize)) {
