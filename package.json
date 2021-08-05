@@ -3,12 +3,14 @@
   "description": "Provides an easy to use API to interact with the SportX relayer.",
   "dependencies": {
     "@ethersproject/abstract-signer": "^5.2.0",
+    "@ethersproject/address": "^5.2.0",
     "@ethersproject/bignumber": "^5.2.0",
     "@ethersproject/bytes": "^5.2.0",
     "@ethersproject/constants": "^5.2.0",
     "@ethersproject/contracts": "^5.2.0",
     "@ethersproject/providers": "^5.2.0",
     "@ethersproject/random": "^5.2.0",
+    "@ethersproject/solidity": "^5.2.0",
     "@ethersproject/units": "^5.2.0",
     "@ethersproject/wallet": "^5.2.0",
     "ably": "^1.1.22",
@@ -16,7 +18,6 @@
     "cross-fetch": "^3.0.4",
     "debug": "^4.1.1",
     "eth-sig-util": "^2.5.2",
-    "ethers": "^5.2.0",
     "lodash": "^4.17.15",
     "moment": "^2.24.0",
     "query-string": "^6.9.0"
