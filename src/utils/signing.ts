@@ -1,5 +1,6 @@
+import { Signer } from "@ethersproject/abstract-signer";
 import { arrayify, hexlify } from "@ethersproject/bytes";
-import { Signer, utils } from "ethers";
+import { utils } from "ethers";
 import {
   ICancelDetails,
   IContractOrder,

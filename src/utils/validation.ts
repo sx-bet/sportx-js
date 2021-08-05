@@ -1,5 +1,7 @@
+import { BigNumber } from "@ethersproject/bignumber";
 import { isHexString } from "@ethersproject/bytes";
-import { BigNumber, constants, utils } from "ethers";
+import * as constants from "@ethersproject/constants";
+import { utils } from "ethers";
 import _ from "lodash";
 import moment from "moment";
 import { isBoolean } from "util";
