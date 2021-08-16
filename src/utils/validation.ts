@@ -2,8 +2,6 @@ import { getAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { isHexString } from "@ethersproject/bytes";
 import * as constants from "@ethersproject/constants";
-import _ from "lodash";
-import moment from "moment";
 import { FRACTION_DENOMINATOR } from "../constants";
 import { IFillDetailsMetadata } from "../types/internal";
 import {
@@ -153,7 +151,7 @@ export function validateIRelayerMakerOrder(order: IRelayerMakerOrder) {
   if (bigNumPercentageOdds.gte(FRACTION_DENOMINATOR)) {
     return `percentageOdds must be less than ${FRACTION_DENOMINATOR.toString()}`;
   }
-  if (moment.unix(parseInt(expiry, 10)).isBefore(moment())) {
+  if (!(parseInt(expiry, 10) >= Date.now() / 1000)) {
     return "expiry before current time.";
   }
   if (!isAddress(executor)) {
@@ -186,10 +184,10 @@ export function validateISignedRelayerMakerOrder(
 }
 
 export function validateINewOrderSchema(order: INewOrder) {
-  if (!_.isNumber(order.expiry) || order.expiry < 0) {
+  if (typeof order.expiry !== "number" || order.expiry < 0) {
     return "Expiry undefined or malformed.";
   }
-  if (moment.unix(order.expiry).isBefore(moment())) {
+  if (order.expiry < Date.now() / 1000) {
     return "Expiry before current time.";
   }
   if (!isPositiveBigNumber(order.totalBetSize)) {
@@ -204,7 +202,7 @@ export function validateINewOrderSchema(order: INewOrder) {
   if (!isHexString(order.marketHash)) {
     return "marketHash undefined or malformed.";
   }
-  if (!_.isBoolean(order.isMakerBettingOutcomeOne)) {
+  if (typeof order.isMakerBettingOutcomeOne !== "boolean") {
     return "isMakerBettingOutcomeOne undefined or malformed.";
   }
   if (!isAddress(order.baseToken)) {

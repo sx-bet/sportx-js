@@ -1,8 +1,8 @@
+import { JsonRpcProvider } from "@ethersproject/providers";
 import { parseUnits } from "@ethersproject/units";
+import { Wallet } from "@ethersproject/wallet";
 import { expect } from "chai";
-import { providers, Wallet } from "ethers";
 import "mocha";
-import moment from "moment";
 import { INewOrder, IPendingBetsRequest } from "../src";
 import {
   DEFAULT_MATIC_RPL_URLS,
@@ -36,7 +36,7 @@ const testMarketHash =
 describe("sportx", () => {
   let sportX: ISportX;
   const env: Environments = process.env.ENVIRONMENT as Environments;
-  const provider = new providers.JsonRpcProvider(DEFAULT_MATIC_RPL_URLS[env]);
+  const provider = new JsonRpcProvider(DEFAULT_MATIC_RPL_URLS[env]);
   const wallet = Wallet.fromMnemonic(TEST_MNEMONIC).connect(provider);
 
   before("should initialize", async () => {
@@ -108,9 +108,7 @@ describe("sportx", () => {
         TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
       ).toString(),
       percentageOdds: convertToAPIPercentageOdds(0.5).toString(),
-      expiry: moment()
-        .add(1, "hour")
-        .unix(),
+      expiry: Math.floor((Date.now() + 3600 * 1000) / 1000),
       isMakerBettingOutcomeOne: true,
       baseToken: TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
     };
@@ -121,9 +119,8 @@ describe("sportx", () => {
         TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
       ).toString(),
       percentageOdds: convertToAPIPercentageOdds(0.5).toString(),
-      expiry: moment()
-        .add(1, "hour")
-        .unix(),
+      expiry: Math.floor((Date.now() + 3600 * 1000) / 1000),
+
       isMakerBettingOutcomeOne: true,
       baseToken: TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
     };
@@ -139,9 +136,8 @@ describe("sportx", () => {
         TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
       ).toString(),
       percentageOdds: convertToAPIPercentageOdds(0.5).toString(),
-      expiry: moment()
-        .add(1, "hour")
-        .unix(),
+      expiry: Math.floor((Date.now() + 3600 * 1000) / 1000),
+
       isMakerBettingOutcomeOne: true,
       baseToken: TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
     };
