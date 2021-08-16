@@ -1,5 +1,6 @@
-import { arrayify, hexlify } from "@ethersproject/bytes";
-import { Signer, utils } from "ethers";
+import { Signer } from "@ethersproject/abstract-signer";
+import { arrayify, hexlify, hexZeroPad } from "@ethersproject/bytes";
+import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
 import {
   ICancelDetails,
   IContractOrder,
@@ -17,7 +18,7 @@ export async function getOrderSignature(
 }
 
 export function getOrderHash(order: IContractOrder): string {
-  return utils.solidityKeccak256(
+  return solidityKeccak256(
     [
       "bytes32",
       "address",
@@ -153,7 +154,7 @@ export function getMaticEip712Payload(
     domain: {
       name: domainName,
       version: "1",
-      salt: utils.hexZeroPad(hexlify(chainId), 32),
+      salt: hexZeroPad(hexlify(chainId), 32),
       verifyingContract
     },
     message: {

@@ -1,17 +1,15 @@
+import { Signer } from "@ethersproject/abstract-signer";
+import { BigNumber } from "@ethersproject/bignumber";
 import { isHexString } from "@ethersproject/bytes";
+import * as constants from "@ethersproject/constants";
+import { Contract } from "@ethersproject/contracts";
+import * as providers from "@ethersproject/providers";
 import { randomBytes } from "@ethersproject/random";
+import { Wallet } from "@ethersproject/wallet";
 import * as ably from "ably";
 import fetch from "cross-fetch";
 import debug from "debug";
-import ethSigUtil from "eth-sig-util";
-import {
-  BigNumber,
-  constants,
-  Contract,
-  providers,
-  Signer,
-  Wallet
-} from "ethers";
+import ethSigUtil from "eth-sig-util";;
 import queryString from "query-string";
 import ChildERC20 from "./artifacts/ChildERC20.json";
 import DAI from "./artifacts/DAI.json";
