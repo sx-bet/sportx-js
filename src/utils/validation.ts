@@ -4,7 +4,6 @@ import { isHexString } from "@ethersproject/bytes";
 import * as constants from "@ethersproject/constants";
 import _ from "lodash";
 import moment from "moment";
-import { isBoolean } from "util";
 import { FRACTION_DENOMINATOR } from "../constants";
 import { IFillDetailsMetadata } from "../types/internal";
 import {
@@ -120,6 +119,10 @@ export function validateIFillDetailsMetadata(metadata: IFillDetailsMetadata) {
     return "returning is not a string";
   }
   return "OK";
+}
+
+function isBoolean(arg: any) {
+  return typeof arg === "boolean";
 }
 
 export function validateIRelayerMakerOrder(order: IRelayerMakerOrder) {
