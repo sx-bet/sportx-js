@@ -188,8 +188,8 @@ describe("sportx", () => {
   });
 
   it("should get trades", async () => {
-    const trades = await sportX.getTrades({});
-    expect(trades.length).greaterThan(0);
+    const response = await sportX.getTrades({});
+    expect(response.trades.length).greaterThan(0);
   });
 
   it("should fill an order", async () => {

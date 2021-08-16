@@ -49,7 +49,10 @@ export function validateIGetTradesRequest(payload: IGetTradesRequest) {
     settled,
     marketHashes,
     baseToken,
-    maker
+    maker,
+    affiliate,
+    pageSize,
+    paginationKey
   } = payload;
   if (
     startDate !== undefined &&
@@ -92,6 +95,15 @@ export function validateIGetTradesRequest(payload: IGetTradesRequest) {
     !marketHashes.every(hash => typeof hash === "string")
   ) {
     return "invalid marketHashes";
+  }
+  if (affiliate !== undefined && typeof affiliate !== "string") {
+    return "invalid affiliate";
+  }
+  if (pageSize !== undefined && typeof pageSize !== "number") {
+    return "invalid pageSize";
+  }
+  if (paginationKey !== undefined && typeof paginationKey !== "string") {
+    return "invalid paginationKey";
   }
   return "OK";
 }

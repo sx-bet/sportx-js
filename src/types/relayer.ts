@@ -42,7 +42,11 @@ export interface IGetTradesRequest {
   marketHashes?: string[];
   baseToken?: string;
   maker?: boolean;
+  affiliate?: string;
+  pageSize?: number;
+  paginationKey?: string;
 }
+
 export interface IPendingBetsRequest {
   bettor: string;
   startDate?: number;
@@ -170,6 +174,12 @@ export interface ITrade {
   betTime: number;
   bettingOutcomeOne: boolean;
   settled: boolean;
+}
+
+export interface ITradesResponse {
+  trades: ITrade[];
+  nextKey: string;
+  pageSize: number;
 }
 
 export enum BetStatus {

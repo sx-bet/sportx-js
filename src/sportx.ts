@@ -9,7 +9,7 @@ import { Wallet } from "@ethersproject/wallet";
 import * as ably from "ably";
 import fetch from "cross-fetch";
 import debug from "debug";
-import ethSigUtil from "eth-sig-util";;
+import ethSigUtil from "eth-sig-util";
 import queryString from "query-string";
 import ChildERC20 from "./artifacts/ChildERC20.json";
 import DAI from "./artifacts/DAI.json";
@@ -56,7 +56,7 @@ import {
   IRelayerResponse,
   ISignedRelayerMakerOrder,
   ISport,
-  ITrade
+  ITradesResponse
 } from "./types/relayer";
 import { convertToContractOrder } from "./utils/convert";
 import { tryParseJson } from "./utils/misc";
@@ -120,7 +120,7 @@ export interface ISportX {
     taker: string,
     baseToken: string
   ): Promise<IRelayerResponse>;
-  getTrades(tradeRequest: IGetTradesRequest): Promise<ITrade[]>;
+  getTrades(tradeRequest: IGetTradesRequest): Promise<ITradesResponse>;
   approveSportXContracts(token: string): Promise<IRelayerResponse>;
   getRealtimeConnection(): ably.Types.RealtimePromise;
   getEip712Signature(payload: any): Promise<string>;
@@ -657,7 +657,9 @@ class SportX implements ISportX {
     return pendingBets;
   }
 
-  public async getTrades(tradeRequest: IGetTradesRequest): Promise<ITrade[]> {
+  public async getTrades(
+    tradeRequest: IGetTradesRequest
+  ): Promise<ITradesResponse> {
     this.debug("getTrades");
     const validation = validateIGetTradesRequest(tradeRequest);
     if (validation !== "OK") {
@@ -674,11 +676,8 @@ class SportX implements ISportX {
     const result = await this.tryParseResponse(response, "Can't get trades");
     this.debug("Relayer response");
     this.debug(result);
-    const {
-      data: { trades }
-    } = result;
-    const ownerTrades: ITrade[] = trades;
-    return ownerTrades;
+    const { data } = result;
+    return data as ITradesResponse;
   }
 
   public async getOrders(
