@@ -1,4 +1,4 @@
-import { getAddress } from "@ethersproject/address";
+import { isAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { isHexString } from "@ethersproject/bytes";
 import * as constants from "@ethersproject/constants";
@@ -237,11 +237,4 @@ export function isPositiveBigNumber(object: any): boolean {
   }
 }
 
-export function isAddress(object: any) {
-  try {
-    getAddress(object);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
+export { isAddress }
