@@ -1,7 +1,7 @@
 import { isAddress } from "@ethersproject/address";
 import { BigNumber } from "@ethersproject/bignumber";
 import { isHexString } from "@ethersproject/bytes";
-import * as constants from "@ethersproject/constants";
+import { Zero } from "@ethersproject/constants";
 import { FRACTION_DENOMINATOR } from "../constants";
 import { IFillDetailsMetadata } from "../types/internal";
 import {
@@ -231,7 +231,7 @@ export function validateINewOrderSchema(order: INewOrder) {
 export function isPositiveBigNumber(object: any): boolean {
   try {
     const bigNumber = BigNumber.from(object);
-    return bigNumber.gt(constants.Zero);
+    return bigNumber.gt(Zero);
   } catch (e) {
     return false;
   }

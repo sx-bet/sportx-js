@@ -1,9 +1,9 @@
 import { Signer } from "@ethersproject/abstract-signer";
 import { BigNumber } from "@ethersproject/bignumber";
 import { isHexString } from "@ethersproject/bytes";
-import * as constants from "@ethersproject/constants";
+import { MaxUint256 } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
-import * as providers from "@ethersproject/providers";
+import { JsonRpcProvider, Web3Provider } from "@ethersproject/providers";
 import { randomBytes } from "@ethersproject/random";
 import { Wallet } from "@ethersproject/wallet";
 import * as ably from "ably";
@@ -130,8 +130,8 @@ export interface ISportX {
 class SportX implements ISportX {
   private mainchainSigningWallet: Signer;
   private relayerUrl: string;
-  private mainchainProvider: providers.JsonRpcProvider;
-  private sidechainProvider: providers.JsonRpcProvider;
+  private mainchainProvider: JsonRpcProvider;
+  private sidechainProvider: JsonRpcProvider;
   private initialized: boolean = false;
   private debug = debug("sportx-js");
   private metadata!: IMetadata;
@@ -149,13 +149,13 @@ class SportX implements ISportX {
     customSidechainProviderUrl?: string,
     privateKey?: string,
     mainchainProviderUrl?: string,
-    mainchainProvider?: providers.Web3Provider
+    mainchainProvider?: Web3Provider
   ) {
     let sidechainProviderUrl = DEFAULT_MATIC_RPL_URLS[env];
     if (customSidechainProviderUrl) {
       sidechainProviderUrl = customSidechainProviderUrl;
     }
-    this.sidechainProvider = new providers.JsonRpcProvider(
+    this.sidechainProvider = new JsonRpcProvider(
       sidechainProviderUrl
     );
     if (privateKey && !isHexString(privateKey)) {
@@ -166,7 +166,7 @@ class SportX implements ISportX {
           `${mainchainProviderUrl} is not provided. Required for initialization via private key`
         );
       }
-      this.mainchainProvider = new providers.JsonRpcProvider(
+      this.mainchainProvider = new JsonRpcProvider(
         mainchainProviderUrl
       );
       this.mainchainSigningWallet = new Wallet(privateKey).connect(
@@ -727,7 +727,7 @@ class SportX implements ISportX {
     const tokenName: string = await tokenContract.name();
     const abiEncodedFunctionSig = tokenContract.interface.encodeFunctionData(
       "approve",
-      [TOKEN_TRANSFER_PROXY_ADDRESS[this.environment], constants.MaxUint256]
+      [TOKEN_TRANSFER_PROXY_ADDRESS[this.environment], MaxUint256]
     );
     const signingPayload = getMaticEip712Payload(
       abiEncodedFunctionSig,
@@ -742,7 +742,7 @@ class SportX implements ISportX {
       owner: walletAddress,
       spender: TOKEN_TRANSFER_PROXY_ADDRESS[this.environment],
       tokenAddress: token,
-      amount: constants.MaxUint256.toString(),
+      amount: MaxUint256.toString(),
       signature
     };
     const response = await fetch(
@@ -839,7 +839,7 @@ export async function newSportX(
   env: Environments,
   privateKey?: string,
   mainchainProviderUrl?: string,
-  mainchainProvider?: providers.Web3Provider,
+  mainchainProvider?: Web3Provider,
   sidechainProviderUrl?: string
 ) {
   const sportX = new SportX(
