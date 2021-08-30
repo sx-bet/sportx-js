@@ -15,18 +15,10 @@ import { convertToAPIPercentageOdds } from "./convert";
 
 export function validateIGetPendingBetsRequest(payload: IPendingBetsRequest) {
   const { bettor, startDate, endDate, fillHash, baseToken } = payload;
-  if (
-    startDate !== undefined &&
-    (typeof startDate !== "number" ||
-      startDate < 0 ||
-      !Number.isInteger(startDate))
-  ) {
+  if (startDate !== undefined && !isNonNegativeInteger(startDate)) {
     return "invalid startDate";
   }
-  if (
-    endDate !== undefined &&
-    (typeof endDate !== "number" || endDate < 0 || !Number.isInteger(endDate))
-  ) {
+  if (endDate !== undefined && !isNonNegativeInteger(endDate)) {
     return "invalid endDate";
   }
   if (!isAddress(bettor)) {
@@ -54,18 +46,10 @@ export function validateIGetTradesRequest(payload: IGetTradesRequest) {
     pageSize,
     paginationKey
   } = payload;
-  if (
-    startDate !== undefined &&
-    (typeof startDate !== "number" ||
-      startDate < 0 ||
-      !Number.isInteger(startDate))
-  ) {
+  if (startDate !== undefined && !isNonNegativeInteger(startDate)) {
     return "invalid startDate";
   }
-  if (
-    endDate !== undefined &&
-    (typeof endDate !== "number" || endDate < 0 || !Number.isInteger(endDate))
-  ) {
+  if (endDate !== undefined && !isNonNegativeInteger(endDate)) {
     return "invalid endDate";
   }
   if (
@@ -99,7 +83,7 @@ export function validateIGetTradesRequest(payload: IGetTradesRequest) {
   if (affiliate !== undefined && typeof affiliate !== "string") {
     return "invalid affiliate";
   }
-  if (pageSize !== undefined && typeof pageSize !== "number") {
+  if (pageSize !== undefined && !isNonNegativeInteger(pageSize)) {
     return "invalid pageSize";
   }
   if (paginationKey !== undefined && typeof paginationKey !== "string") {
@@ -154,7 +138,7 @@ export function validateIRelayerMakerOrder(order: IRelayerMakerOrder) {
     return "maker is not a valid address";
   }
   if (!isPositiveBigNumber(totalBetSize)) {
-    return "totalBetSize as a number is not non-negative";
+    return "totalBetSize as a number is not positive";
   }
   if (!isPositiveBigNumber(percentageOdds)) {
     return "percentageOdds as a number is not positive";
@@ -196,7 +180,7 @@ export function validateISignedRelayerMakerOrder(
 }
 
 export function validateINewOrderSchema(order: INewOrder) {
-  if (typeof order.expiry !== "number" || order.expiry < 0) {
+  if (!isNonNegativeInteger(order.expiry)) {
     return "Expiry undefined or malformed.";
   }
   if (order.expiry < Date.now() / 1000) {
@@ -221,6 +205,10 @@ export function validateINewOrderSchema(order: INewOrder) {
     return "baseToken undefined or malformed.";
   }
   return "OK";
+}
+
+function isNonNegativeInteger(input: any): boolean {
+  return Number.isInteger(input) && input >= 0
 }
 
 /**
