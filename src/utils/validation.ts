@@ -126,6 +126,7 @@ export function validateIRelayerMakerOrder(order: IRelayerMakerOrder) {
     totalBetSize,
     percentageOdds,
     expiry,
+    apiExpiry,
     executor,
     baseToken,
     salt,
@@ -147,8 +148,11 @@ export function validateIRelayerMakerOrder(order: IRelayerMakerOrder) {
   if (bigNumPercentageOdds.gte(FRACTION_DENOMINATOR)) {
     return `percentageOdds must be less than ${FRACTION_DENOMINATOR.toString()}`;
   }
-  if (!(parseInt(expiry, 10) >= Date.now() / 1000)) {
-    return "expiry before current time.";
+  if (expiry !== 2209006800) {
+    return "expiry incorrect";
+  }
+  if (apiExpiry >= Date.now() / 1000) {
+    return "apiExpiry before current time.";
   }
   if (!isAddress(executor)) {
     return "executor is not a valid address";
@@ -208,7 +212,7 @@ export function validateINewOrderSchema(order: INewOrder) {
 }
 
 function isNonNegativeInteger(input: any): boolean {
-  return Number.isInteger(input) && input >= 0
+  return Number.isInteger(input) && input >= 0;
 }
 
 /**
@@ -225,4 +229,4 @@ export function isPositiveBigNumber(object: any): boolean {
   }
 }
 
-export { isAddress }
+export { isAddress };

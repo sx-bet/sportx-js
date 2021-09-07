@@ -6,7 +6,8 @@ export interface IRelayerMakerOrder {
   maker: string;
   totalBetSize: string;
   percentageOdds: string;
-  expiry: string;
+  expiry: number;
+  apiExpiry: number;
   executor: string;
   salt: string;
   isMakerBettingOutcomeOne: boolean;

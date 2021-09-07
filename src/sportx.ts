@@ -155,9 +155,7 @@ class SportX implements ISportX {
     if (customSidechainProviderUrl) {
       sidechainProviderUrl = customSidechainProviderUrl;
     }
-    this.sidechainProvider = new JsonRpcProvider(
-      sidechainProviderUrl
-    );
+    this.sidechainProvider = new JsonRpcProvider(sidechainProviderUrl);
     if (privateKey && !isHexString(privateKey)) {
       throw new Error(`${privateKey} is not a valid private key.`);
     } else if (privateKey) {
@@ -166,9 +164,7 @@ class SportX implements ISportX {
           `${mainchainProviderUrl} is not provided. Required for initialization via private key`
         );
       }
-      this.mainchainProvider = new JsonRpcProvider(
-        mainchainProviderUrl
-      );
+      this.mainchainProvider = new JsonRpcProvider(mainchainProviderUrl);
       this.mainchainSigningWallet = new Wallet(privateKey).connect(
         this.mainchainProvider
       );
@@ -406,7 +402,8 @@ class SportX implements ISportX {
           maker: walletAddress,
           totalBetSize: bigNumBetSize.toString(),
           percentageOdds: order.percentageOdds,
-          expiry: order.expiry.toString(),
+          expiry: 2209006800,
+          apiExpiry: order.expiry,
           executor: this.metadata.executorAddress,
           baseToken: order.baseToken,
           salt,
