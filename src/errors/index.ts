@@ -1,2 +1,2 @@
-export * from "./schema_error";
-export * from "./api_error";
+export * from "./schema_error.js";
+export * from "./api_error.js";

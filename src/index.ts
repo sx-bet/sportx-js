@@ -8,15 +8,15 @@ export {
   Tokens,
   TOKEN_ADDRESSES,
   TOKEN_TRANSFER_PROXY_ADDRESS
-} from "./constants";
-export * from "./errors";
-export * from "./sportx";
-export * from "./types/internal";
-export * from "./types/relayer";
+} from "./constants.js";
+export * from "./errors/index.js";
+export * from "./sportx.js";
+export * from "./types/internal.js";
+export * from "./types/relayer.js";
 export {
   convertFromAPIPercentageOdds,
   convertToAPIPercentageOdds,
   convertToDisplayAmount,
   convertToTakerPayAmount,
   convertToTrueTokenAmount
-} from "./utils/convert";
+} from "./utils/convert.js";

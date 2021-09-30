@@ -1,4 +1,4 @@
-import { IApproveSpenderPayload, ICancelDetails } from "./internal";
+import { IApproveSpenderPayload, ICancelDetails } from "./internal.js";
 
 export interface IRelayerMakerOrder {
   marketHash: string;

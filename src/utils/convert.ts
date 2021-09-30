@@ -5,9 +5,9 @@ import {
   FRACTION_DENOMINATOR,
   PERCENTAGE_PRECISION_EXPONENT,
   TokenDecimalMapping
-} from "../constants";
-import { IContractOrder } from "../types/internal";
-import { IRelayerMakerOrder } from "../types/relayer";
+} from "../constants.js";
+import { IContractOrder } from "../types/internal.js";
+import { IRelayerMakerOrder } from "../types/relayer.js";
 
 export function convertToAPIPercentageOdds(decimal: number): EthBigNumber {
   if (decimal < 0 || decimal > 1) {
