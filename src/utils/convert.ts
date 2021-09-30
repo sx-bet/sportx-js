@@ -1,6 +1,6 @@
 import { BigNumber as EthBigNumber } from "@ethersproject/bignumber";
 import { formatUnits, parseUnits } from "@ethersproject/units";
-import { BigNumber } from "bignumber.js";
+import BigNumber from "bignumber.js";
 import {
   FRACTION_DENOMINATOR,
   PERCENTAGE_PRECISION_EXPONENT,
