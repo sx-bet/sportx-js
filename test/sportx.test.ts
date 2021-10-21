@@ -166,7 +166,6 @@ describe("sportx", () => {
     expect(orders.length).greaterThan(0);
   });
 
-
   it("should get pending bets", async () => {
     const payload: IPendingBetsRequest = {
       bettor: wallet.address

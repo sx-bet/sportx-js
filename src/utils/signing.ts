@@ -64,7 +64,7 @@ export function getFillOrderEIP712Payload(
         { name: "name", type: "string" },
         { name: "version", type: "string" },
         { name: "chainId", type: "uint256" },
-        { name: "verifyingContract", type: "address" },
+        { name: "verifyingContract", type: "address" }
       ],
       Details: [
         { name: "action", type: "string" },
@@ -73,14 +73,14 @@ export function getFillOrderEIP712Payload(
         { name: "stake", type: "string" },
         { name: "odds", type: "string" },
         { name: "returning", type: "string" },
-        { name: "fills", type: "FillObject" },
+        { name: "fills", type: "FillObject" }
       ],
       FillObject: [
         { name: "orders", type: "Order[]" },
         { name: "makerSigs", type: "bytes[]" },
         { name: "takerAmounts", type: "uint256[]" },
         { name: "fillSalt", type: "uint256" },
-        { name: "beneficiary", type: "address" },
+        { name: "beneficiary", type: "address" }
       ],
       Order: [
         { name: "marketHash", type: "bytes32" },
@@ -91,15 +91,15 @@ export function getFillOrderEIP712Payload(
         { name: "salt", type: "uint256" },
         { name: "maker", type: "address" },
         { name: "executor", type: "address" },
-        { name: "isMakerBettingOutcomeOne", type: "bool" },
-      ],
+        { name: "isMakerBettingOutcomeOne", type: "bool" }
+      ]
     },
     primaryType: "Details",
     domain: {
       name: "SportX",
       version,
       chainId,
-      verifyingContract,
+      verifyingContract
     },
     message: {
       action: fillDetails.action,
@@ -110,7 +110,7 @@ export function getFillOrderEIP712Payload(
       returning: fillDetails.returning,
       fills: {
         makerSigs: fillDetails.fills.makerSigs,
-        orders: fillDetails.fills.orders.map((order) => ({
+        orders: fillDetails.fills.orders.map(order => ({
           marketHash: order.marketHash,
           baseToken: order.baseToken,
           totalBetSize: order.totalBetSize.toString(),
@@ -119,15 +119,15 @@ export function getFillOrderEIP712Payload(
           salt: order.salt.toString(),
           maker: order.maker,
           executor: order.executor,
-          isMakerBettingOutcomeOne: order.isMakerBettingOutcomeOne,
+          isMakerBettingOutcomeOne: order.isMakerBettingOutcomeOne
         })),
-        takerAmounts: fillDetails.fills.takerAmounts.map((takerAmount) =>
+        takerAmounts: fillDetails.fills.takerAmounts.map(takerAmount =>
           takerAmount.toString()
         ),
         fillSalt: fillDetails.fills.fillSalt.toString(),
-        beneficiary: fillDetails.fills.beneficiary,
-      },
-    },
+        beneficiary: fillDetails.fills.beneficiary
+      }
+    }
   };
   return payload;
 }

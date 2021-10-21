@@ -18,6 +18,7 @@ import {
   CHAIN_IDS,
   DEFAULT_MATIC_RPL_URLS,
   EIP712_FILL_HASHER_ADDRESSES,
+  EIP712_VERSION,
   Environments,
   PublicNetworks,
   RELAYER_HTTP_ENDPOINTS,
@@ -26,8 +27,7 @@ import {
   SidechainNetworks,
   TOKEN_ADDRESSES,
   TOKEN_TRANSFER_PROXY_ADDRESS,
-  Tokens,
-  EIP712_VERSION
+  Tokens
 } from "./constants";
 import { APIError } from "./errors/api_error";
 import { APISchemaError } from "./errors/schema_error";

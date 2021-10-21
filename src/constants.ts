@@ -47,7 +47,7 @@ export const TOKEN_TRANSFER_PROXY_ADDRESS = {
 export const EIP712_VERSION = {
   [Environments.MUMBAI]: "3.0",
   [Environments.PRODUCTION]: "3.0"
-}
+};
 
 interface IStringObj {
   [env: string]: string;
