@@ -1,7 +1,7 @@
 import { Signer } from "@ethersproject/abstract-signer";
 import { BigNumber } from "@ethersproject/bignumber";
 import { isHexString } from "@ethersproject/bytes";
-import { MaxUint256 } from "@ethersproject/constants";
+import { AddressZero, MaxUint256 } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
 import { JsonRpcProvider, Web3Provider } from "@ethersproject/providers";
 import { randomBytes } from "@ethersproject/random";
@@ -483,7 +483,8 @@ class SportX implements ISportX {
         orders: orders.map(convertToContractOrder),
         makerSigs: orders.map(order => order.signature),
         takerAmounts: takerAmounts.map(BigNumber.from),
-        fillSalt
+        fillSalt,
+        beneficiary: AddressZero
       }
     };
     const fillOrderPayload = getFillOrderEIP712Payload(
