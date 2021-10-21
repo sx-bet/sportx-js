@@ -166,19 +166,6 @@ describe("sportx", () => {
     expect(orders.length).greaterThan(0);
   });
 
-  it("should suggest orders", async () => {
-    const suggestions = await sportX.suggestOrders(
-      testMarketHash,
-      convertToTrueTokenAmount(
-        10,
-        TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
-      ),
-      false,
-      wallet.address,
-      TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
-    );
-    expect(suggestions.status).to.equal("success");
-  });
 
   it("should get pending bets", async () => {
     const payload: IPendingBetsRequest = {
@@ -190,33 +177,5 @@ describe("sportx", () => {
   it("should get trades", async () => {
     const response = await sportX.getTrades({});
     expect(response.trades.length).greaterThan(0);
-  });
-
-  it("should fill an order", async () => {
-    const orders = await sportX.getOrders([testMarketHash]);
-    const suggestions = await sportX.suggestOrders(
-      testMarketHash,
-      convertToTrueTokenAmount(
-        10,
-        TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
-      ),
-      true,
-      wallet.address,
-      TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
-    );
-    const ordersToFill = orders.filter(order =>
-      suggestions.data.orderHashes.includes(order.orderHash)
-    );
-    const fill = await sportX.fillOrders(
-      ordersToFill,
-      ordersToFill.map(o =>
-        convertToTrueTokenAmount(
-          10,
-          TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
-        )
-      )
-    );
-
-    expect(fill.status).to.equal("success");
   });
 });

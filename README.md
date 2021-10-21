@@ -24,17 +24,16 @@ You can do the following things with this API:
 4. Submit a new order to a market
 5. Cancel an existing order
 6. Get all orders on market(s)
-7. Get suggestions of orders to fill (gives you the orders with the best odds)
-8. Fill order(s)
-9. Get all active orders for an account
-10. Get pending or failed bets for a user
-11. Get past trades (graded/settled and ungraded/unsettled)
-12. Approve SportX contracts trading
-13. Subscribe to market changes
-14. Subscribe to live scores by game
-15. Subscribe to order book changes by market
-16. Subscribe to active orders
-17. Lookup markets
+7. Fill order(s)
+8. Get all active orders for an account
+9. Get pending or failed bets for a user
+10. Get past trades (graded/settled and ungraded/unsettled)
+11. Approve SportX contracts trading
+12. Subscribe to market changes
+13. Subscribe to live scores by game
+14. Subscribe to order book changes by market
+15. Subscribe to active orders
+16. Lookup markets
 
 We support betting in DAI, WETH, and USDC
 
@@ -513,40 +512,6 @@ The below are for information purposes only and not needed to operate this API.
 
 `signature` is the signature on the order payload by the maker to verify that the maker did indeed create this order.
 
-### Get fill suggestions
-
-The API has a utility method to suggest to the orders with the best odds based on how much you want to fill. You can call `suggestOrders(marketHash, betSize, takerDirectionOutcomeOne, taker, baseToken)` to receive the suggestions.
-
-Example:
-
-```typescript
-const suggestions = await sportX.suggestOrders(
-  "0xb3f686d972a91adecfd0d0b53a66fbbeffd4965a11519df6dbdc12d6ebc4b94e",
-  "0x75BC4c86e7e096732a9a562dcc79a14D95784590",
-  true,
-  "15000000000000000000",
-  "0x44495672C86eEeE14adA9a3e453EEd68a338cdC1"
-);
-```
-
-Which produces:
-
-```json
-{
-  "fillAmounts": ["13204264472968820177"],
-  "orderHashes": [
-    "0x4291f23f6d05788386b213a79271ff3ebfd72687952a38fde0f0564223fe13f2"
-  ]
-}
-```
-
-Typically, you would use these "suggestions" to actually fill an order. See the next section.
-
-The following `APIError` error codes are possible for this endpoint:
-
-- `BASE_TOKEN_MISMATCH` - The supplied base token is not supported by the API. See the metadata endpoint
-- `TAKER_ORDER_AMOUNT_TOO_LOW` - The amount requested to fill is too low.
-
 ### Filling orders
 
 To actually fill orders on SportX, you will need the actual orders themselves which you can obtain from `getOrders()` as well as the amount(s) you want to fill each order.
@@ -558,8 +523,6 @@ The orders are filled meta style, meaning that the filler does not pay for gas a
 The signature is
 
 `fillOrders(orders: ISignedRelayerMakerOrder[], betAmounts: string[], fillDetailsMetadata?: IFillDetailsMetadata, affiliateAddress?: string, approvalTx?: string)`
-
-Alternatively, you can use the `suggestOrders(marketHash, betSize, takerDirectionOutcomeOne, taker, baseToken)` method above to suggest to you the `orderHashes` with the best odds given your `betSize`.
 
 _Note that you will still need to get the actual orders themselves from `getOrders(marketHash)`. You will need to find the orders in the `getOrders(marketHash)` response whose orderHashe(s) match up._
 
