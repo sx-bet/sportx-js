@@ -26,7 +26,8 @@ import {
   SidechainNetworks,
   TOKEN_ADDRESSES,
   TOKEN_TRANSFER_PROXY_ADDRESS,
-  Tokens
+  Tokens,
+  EIP712_VERSION
 } from "./constants";
 import { APIError } from "./errors/api_error";
 import { APISchemaError } from "./errors/schema_error";
@@ -112,13 +113,6 @@ export interface ISportX {
     fillDetailsMetadata?: IFillDetailsMetadata,
     affiliateAddress?: string,
     approveProxyPayload?: IApproveSpenderPayload
-  ): Promise<IRelayerResponse>;
-  suggestOrders(
-    marketHash: string,
-    betSize: string,
-    takerDirectionOutcomeOne: boolean,
-    taker: string,
-    baseToken: string
   ): Promise<IRelayerResponse>;
   getTrades(tradeRequest: IGetTradesRequest): Promise<ITradesResponse>;
   approveSportXContracts(token: string): Promise<IRelayerResponse>;
@@ -440,55 +434,6 @@ class SportX implements ISportX {
     return result as IRelayerResponse;
   }
 
-  public async suggestOrders(
-    marketHash: string,
-    betSize: string,
-    takerDirectionOutcomeOne: boolean,
-    taker: string,
-    baseToken: string
-  ) {
-    this.debug("suggestOrders");
-    if (!isHexString(marketHash)) {
-      throw new APISchemaError("marketHash is not a hex string ");
-    }
-    if (!isPositiveBigNumber(betSize)) {
-      throw new APISchemaError("betSize as a number is not positive");
-    }
-    if (typeof takerDirectionOutcomeOne !== "boolean") {
-      throw new APISchemaError("takerDirectionOutcomeOne is not a boolean");
-    }
-    if (!isAddress(taker)) {
-      throw new APISchemaError("taker is not a valid address");
-    }
-    if (!isAddress(baseToken)) {
-      throw new APISchemaError("baseToken is not a valid address");
-    }
-    const payload: IRelayerMarketOrderRequest = {
-      marketHash,
-      takerPayAmount: betSize,
-      takerDirection: takerDirectionOutcomeOne ? "outcomeOne" : "outcomeTwo",
-      taker,
-      baseToken
-    };
-    this.debug("Suggest orders payload:");
-    this.debug(payload);
-    const response = await fetch(
-      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.SUGGEST_ORDERS}`,
-      {
-        method: "POST",
-        body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" }
-      }
-    );
-    const result = await this.tryParseResponse(
-      response,
-      "Can't get suggested orders"
-    );
-    this.debug("Relayer response");
-    this.debug(result);
-    return result as IRelayerResponse;
-  }
-
   public async fillOrders(
     orders: ISignedRelayerMakerOrder[],
     takerAmounts: string[],
@@ -543,8 +488,9 @@ class SportX implements ISportX {
     };
     const fillOrderPayload = getFillOrderEIP712Payload(
       fillDetails,
-      this.mainchainChainId,
-      EIP712_FILL_HASHER_ADDRESSES[this.environment]
+      this.sidechainChainId,
+      EIP712_FILL_HASHER_ADDRESSES[this.environment],
+      EIP712_VERSION[this.environment]
     );
     this.debug(`EIP712 payload`);
     this.debug(fillOrderPayload);
@@ -597,7 +543,7 @@ class SportX implements ISportX {
     };
     const cancelOrderPayload = getCancelOrderEIP712Payload(
       cancelDetails,
-      this.mainchainChainId
+      this.sidechainChainId
     );
     const cancelSignature = await this.getEip712Signature(cancelOrderPayload);
     const payload: IRelayerCancelOrderRequest = {
