@@ -55,6 +55,7 @@ async function getContractOrderSignature(
 export function getFillOrderEIP712Payload(
   fillDetails: IFillDetails,
   chainId: number,
+  version: string,
   verifyingContract: string
 ) {
   const payload = {
@@ -78,7 +79,8 @@ export function getFillOrderEIP712Payload(
         { name: "orders", type: "Order[]" },
         { name: "makerSigs", type: "bytes[]" },
         { name: "takerAmounts", type: "uint256[]" },
-        { name: "fillSalt", type: "uint256" }
+        { name: "fillSalt", type: "uint256" },
+        { name: "beneficiary", type: "address" }
       ],
       Order: [
         { name: "marketHash", type: "bytes32" },
@@ -95,7 +97,7 @@ export function getFillOrderEIP712Payload(
     primaryType: "Details",
     domain: {
       name: "SportX",
-      version: "1.0",
+      version,
       chainId,
       verifyingContract
     },
@@ -122,7 +124,8 @@ export function getFillOrderEIP712Payload(
         takerAmounts: fillDetails.fills.takerAmounts.map(takerAmount =>
           takerAmount.toString()
         ),
-        fillSalt: fillDetails.fills.fillSalt.toString()
+        fillSalt: fillDetails.fills.fillSalt.toString(),
+        beneficiary: fillDetails.fills.beneficiary
       }
     }
   };

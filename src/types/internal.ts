@@ -47,6 +47,7 @@ export interface IFillObject {
   makerSigs: string[];
   takerAmounts: BigNumber[];
   fillSalt: BigNumber;
+  beneficiary: string;
 }
 
 export interface ICancelDetails {

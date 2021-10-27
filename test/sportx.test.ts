@@ -26,11 +26,9 @@ const TEST_MNEMONIC =
 if (!process.env.ENVIRONMENT) {
   throw new Error(`ENVIRONMENT env var not defined`);
 }
-if (!process.env.MAINCHAIN_PROVIDER_URL) {
-  throw new Error(`MAINCHAIN_PROVIDER_URL env var not defined`);
-}
 
 const testMarketHash =
+  process.env.MARKET_HASH ||
   "0x6dad8a2e7d9ca9a2a097deea2efeaec67f82f8ec53222ae9c83312f7a284e9b6"; // CHANGE THIS TO MATCH A REAL MARKET
 
 describe("sportx", () => {
@@ -42,10 +40,8 @@ describe("sportx", () => {
   before("should initialize", async () => {
     sportX = await newSportX(
       env,
-      wallet.privateKey,
-      process.env.MAINCHAIN_PROVIDER_URL,
-      undefined,
-      process.env.SIDECHAIN_PROVIDER_URL
+      process.env.SIDECHAIN_PROVIDER_URL,
+      wallet.privateKey
     );
     await sportX.approveSportXContracts(
       TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
@@ -131,8 +127,8 @@ describe("sportx", () => {
   it("should cancel an order", async () => {
     const newOrder: INewOrder = {
       marketHash: testMarketHash,
-      totalBetSize: parseUnits(
-        "10",
+      totalBetSize: convertToTrueTokenAmount(
+        10,
         TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
       ).toString(),
       percentageOdds: convertToAPIPercentageOdds(0.5).toString(),
@@ -166,20 +162,6 @@ describe("sportx", () => {
     expect(orders.length).greaterThan(0);
   });
 
-  it("should suggest orders", async () => {
-    const suggestions = await sportX.suggestOrders(
-      testMarketHash,
-      convertToTrueTokenAmount(
-        10,
-        TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
-      ),
-      false,
-      wallet.address,
-      TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
-    );
-    expect(suggestions.status).to.equal("success");
-  });
-
   it("should get pending bets", async () => {
     const payload: IPendingBetsRequest = {
       bettor: wallet.address
@@ -193,30 +175,23 @@ describe("sportx", () => {
   });
 
   it("should fill an order", async () => {
-    const orders = await sportX.getOrders([testMarketHash]);
-    const suggestions = await sportX.suggestOrders(
-      testMarketHash,
-      convertToTrueTokenAmount(
-        10,
-        TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
-      ),
-      true,
-      wallet.address,
+    const orders = await sportX.getOrders(
+      [testMarketHash],
+      undefined,
       TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
     );
-    const ordersToFill = orders.filter(order =>
-      suggestions.data.orderHashes.includes(order.orderHash)
+    const oneSidedOrders = orders.filter(
+      order => order.isMakerBettingOutcomeOne
     );
     const fill = await sportX.fillOrders(
-      ordersToFill,
-      ordersToFill.map(o =>
+      oneSidedOrders,
+      oneSidedOrders.map(o =>
         convertToTrueTokenAmount(
           10,
           TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
         )
       )
     );
-
     expect(fill.status).to.equal("success");
   });
 });

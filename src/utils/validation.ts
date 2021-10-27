@@ -151,7 +151,7 @@ export function validateIRelayerMakerOrder(order: IRelayerMakerOrder) {
   if (expiry !== 2209006800) {
     return "expiry incorrect";
   }
-  if (apiExpiry >= Date.now() / 1000) {
+  if (apiExpiry <= Date.now() / 1000) {
     return "apiExpiry before current time.";
   }
   if (!isAddress(executor)) {

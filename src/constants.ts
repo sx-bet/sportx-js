@@ -40,8 +40,13 @@ export const DEFAULT_MATIC_RPL_URLS = {
 };
 
 export const TOKEN_TRANSFER_PROXY_ADDRESS = {
-  [Environments.MUMBAI]: "0x2D583ba47b54C1C60401eeA5508aCb8c935288C6",
-  [Environments.PRODUCTION]: "0xa6EA1Ed4aeC85dF277fae3512f8a6cbb40c1Fe7e"
+  [Environments.MUMBAI]: "0xa6Fd088CCce831E562ef7B580a7c50BD7aE2B761",
+  [Environments.PRODUCTION]: "0x3d8A563962dFeE81D7780Ed2BF0257ab88df857D"
+};
+
+export const EIP712_VERSION = {
+  [Environments.MUMBAI]: "3.0",
+  [Environments.PRODUCTION]: "3.0"
 };
 
 interface IStringObj {
@@ -85,13 +90,13 @@ export const TOKEN_ADDRESSES: INestedStringObj = {
 };
 
 export const FILL_ORDER_ADDRESS = {
-  [Environments.MUMBAI]: "0x360073ac80321b3f58eD899BF85d5B776bF93612",
-  [Environments.PRODUCTION]: "0x398995122D4C5215991c15C2c5EfB96882695d1A"
+  [Environments.MUMBAI]: "0x4Cd6F9b67b9c5616A526d5251d9CEF1BF97E99bB",
+  [Environments.PRODUCTION]: "0xF3440625e1751208350384d11C5AC89ed2b6eEb2"
 };
 
 export const EIP712_FILL_HASHER_ADDRESSES = {
-  [Environments.MUMBAI]: "0xe702c1dAF71948b59892b30613187b050249339a",
-  [Environments.PRODUCTION]: "0xCc4fBba7D0E0F2A03113F42f5D3aE80d9B2aD55d"
+  [Environments.MUMBAI]: "0x9B830735E38b96FA0d9e934E3cC901bfa4A9C508",
+  [Environments.PRODUCTION]: "0xCD667A4E7E377388b3aD8d57C3AEc4aC914c84Eb"
 };
 
 export const RELAYER_HTTP_ENDPOINTS = {
@@ -106,7 +111,6 @@ export const RELAYER_HTTP_ENDPOINTS = {
   POPULAR: "/markets/popular",
   HISTORICAL_MARKETS: "/markets/find",
   NEW_ORDER: "/orders/new",
-  SUGGEST_ORDERS: "/orders/suggest",
   FILL_ORDERS: "/orders/fill",
   CANCEL_ORDERS: "/orders/cancel",
   TRADES: "/trades",
