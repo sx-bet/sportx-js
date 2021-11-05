@@ -5,9 +5,9 @@ import {
   ICancelDetails,
   IContractOrder,
   IFillDetails
-} from "../types/internal";
-import { IRelayerMakerOrder } from "../types/relayer";
-import { convertToContractOrder } from "./convert";
+} from "../types/internal.js";
+import { IRelayerMakerOrder } from "../types/relayer.js";
+import { convertToContractOrder } from "./convert.js";
 
 export async function getOrderSignature(
   order: IRelayerMakerOrder,

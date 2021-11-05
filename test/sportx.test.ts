@@ -3,20 +3,20 @@ import { parseUnits } from "@ethersproject/units";
 import { Wallet } from "@ethersproject/wallet";
 import { expect } from "chai";
 import "mocha";
-import { INewOrder, IPendingBetsRequest } from "../src";
+import { INewOrder, IPendingBetsRequest } from "../src/index.js";
 import {
   DEFAULT_MATIC_RPL_URLS,
   Environments,
   TOKEN_ADDRESSES,
   Tokens
-} from "../src/constants";
-import { ISportX, newSportX } from "../src/sportx";
+} from "../src/constants.js";
+import { ISportX, newSportX } from "../src/sportx.js";
 import {
   convertFromAPIPercentageOdds,
   convertToAPIPercentageOdds,
   convertToTrueTokenAmount
-} from "../src/utils/convert";
-import { getSidechainNetwork } from "../src/utils/networks";
+} from "../src/utils/convert.js";
+import { getSidechainNetwork } from "../src/utils/networks.js";
 
 // tslint:disable no-string-literal
 

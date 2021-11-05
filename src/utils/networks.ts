@@ -1,4 +1,4 @@
-import { Environments, PublicNetworks, SidechainNetworks } from "../constants";
+import { Environments, PublicNetworks, SidechainNetworks } from "../constants.js";
 
 export function getMainchainNetwork(environment: Environments) {
   switch (environment) {
