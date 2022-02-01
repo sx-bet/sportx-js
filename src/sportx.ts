@@ -36,6 +36,7 @@ import {
 } from "./types/internal";
 import {
   IActiveLeague,
+  ICancelOrderEventRequest,
   IDetailedRelayerMakerOrder,
   IGetTradesRequest,
   ILeague,
@@ -53,7 +54,6 @@ import {
   ISignedRelayerMakerOrder,
   ISport,
   ITradesResponse,
-  ICancelOrderEventRequest,
 } from "./types/relayer";
 import { convertToContractOrder } from "./utils/convert";
 import { tryParseJson } from "./utils/misc";
@@ -138,7 +138,7 @@ class SportX implements ISportX {
     customSidechainProviderUrl?: string,
     privateKey?: string,
     sidechainProvider?: Web3Provider,
-    apiUrl?: string,
+    apiUrl?: string
   ) {
     let sidechainProviderUrl = DEFAULT_MATIC_RPL_URLS[env];
     if (customSidechainProviderUrl) {
@@ -172,14 +172,14 @@ class SportX implements ISportX {
     if (typeof sportXeventId !== "string") {
       throw new APISchemaError("sportXeventId is not a string");
     }
-    const salt = `0x${Buffer.from(randomBytes(32)).toString("hex")}`
+    const salt = `0x${Buffer.from(randomBytes(32)).toString("hex")}`;
     const cancelOrderPayload = getCancelOrderEventsEIP712Payload(
       sportXeventId,
       salt,
       this.sidechainChainId
     );
-    this.debug("Signing payload")
-    this.debug(cancelOrderPayload)
+    this.debug("Signing payload");
+    this.debug(cancelOrderPayload);
     const signature = await this.getEip712Signature(cancelOrderPayload);
     const payload: ICancelOrderEventRequest = {
       signature,
@@ -478,14 +478,15 @@ class SportX implements ISportX {
     const fillSalt = BigNumber.from(randomBytes(32));
     const solidityOrders = orders.map(convertToContractOrder);
     const orderHashes = solidityOrders.map(getOrderHash);
-    const finalFillDetailsMetadata: IFillDetailsMetadata = fillDetailsMetadata || {
-      action: "N/A",
-      market: "N/A",
-      betting: "N/A",
-      stake: "N/A",
-      odds: "N/A",
-      returning: "N/A",
-    };
+    const finalFillDetailsMetadata: IFillDetailsMetadata =
+      fillDetailsMetadata || {
+        action: "N/A",
+        market: "N/A",
+        betting: "N/A",
+        stake: "N/A",
+        odds: "N/A",
+        returning: "N/A",
+      };
     const fillDetails: IFillDetails = {
       ...finalFillDetailsMetadata,
       fills: {
@@ -556,7 +557,6 @@ class SportX implements ISportX {
       this.sidechainChainId
     );
     const cancelSignature = await this.getEip712Signature(cancelOrderPayload);
-    console.log(cancelSignature);
     const payload: IRelayerCancelOrderRequest = {
       ...cancelDetails,
       cancelSignature,

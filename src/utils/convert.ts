@@ -4,7 +4,7 @@ import { BigNumber } from "bignumber.js";
 import {
   FRACTION_DENOMINATOR,
   PERCENTAGE_PRECISION_EXPONENT,
-  TokenDecimalMapping
+  TokenDecimalMapping,
 } from "../constants";
 import { IContractOrder } from "../types/internal";
 import { IRelayerMakerOrder } from "../types/relayer";
@@ -44,7 +44,7 @@ export function convertToContractOrder(
     percentageOdds: EthBigNumber.from(order.percentageOdds),
     expiry: EthBigNumber.from(order.expiry),
     baseToken: order.baseToken,
-    salt: EthBigNumber.from(order.salt)
+    salt: EthBigNumber.from(order.salt),
   };
 }
 export function convertToTrueTokenAmount(amount: number, baseToken: string) {

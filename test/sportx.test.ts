@@ -6,14 +6,14 @@ import { INewOrder, IPendingBetsRequest } from "../src";
 import {
   DEFAULT_MATIC_RPL_URLS,
   Environments,
+  TOKEN_ADDRESSES,
   Tokens,
-  TOKEN_ADDRESSES
 } from "../src/constants";
 import { ISportX, newSportX } from "../src/sportx";
 import {
   convertFromAPIPercentageOdds,
   convertToAPIPercentageOdds,
-  convertToTrueTokenAmount
+  convertToTrueTokenAmount,
 } from "../src/utils/convert";
 import { getSidechainNetwork } from "../src/utils/networks";
 

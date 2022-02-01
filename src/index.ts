@@ -7,7 +7,7 @@ export {
   RELAYER_URLS,
   Tokens,
   TOKEN_ADDRESSES,
-  TOKEN_TRANSFER_PROXY_ADDRESS
+  TOKEN_TRANSFER_PROXY_ADDRESS,
 } from "./constants";
 export * from "./errors";
 export * from "./sportx";
@@ -18,5 +18,5 @@ export {
   convertToAPIPercentageOdds,
   convertToDisplayAmount,
   convertToTakerPayAmount,
-  convertToTrueTokenAmount
+  convertToTrueTokenAmount,
 } from "./utils/convert";

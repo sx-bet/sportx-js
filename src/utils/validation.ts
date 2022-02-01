@@ -9,7 +9,7 @@ import {
   INewOrder,
   IPendingBetsRequest,
   IRelayerMakerOrder,
-  ISignedRelayerMakerOrder
+  ISignedRelayerMakerOrder,
 } from "../types/relayer";
 import { convertToAPIPercentageOdds } from "./convert";
 
@@ -44,7 +44,7 @@ export function validateIGetTradesRequest(payload: IGetTradesRequest) {
     maker,
     affiliate,
     pageSize,
-    paginationKey
+    paginationKey,
   } = payload;
   if (startDate !== undefined && !isNonNegativeInteger(startDate)) {
     return "invalid startDate";
@@ -76,7 +76,7 @@ export function validateIGetTradesRequest(payload: IGetTradesRequest) {
   }
   if (
     marketHashes !== undefined &&
-    !marketHashes.every(hash => typeof hash === "string")
+    !marketHashes.every((hash) => typeof hash === "string")
   ) {
     return "invalid marketHashes";
   }
@@ -130,7 +130,7 @@ export function validateIRelayerMakerOrder(order: IRelayerMakerOrder) {
     executor,
     baseToken,
     salt,
-    isMakerBettingOutcomeOne
+    isMakerBettingOutcomeOne,
   } = order;
   if (!isHexString(marketHash)) {
     return "marketHash is not a valid hex string";
