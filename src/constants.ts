@@ -114,6 +114,7 @@ export const RELAYER_HTTP_ENDPOINTS = {
   FILL_ORDERS: "/orders/fill",
   CANCEL_ORDERS: "/orders/cancel",
   CANCEL_EVENT_ORDERS: "/orders/cancel/event",
+  CANCEL_ALL_ORDERS: "/orders/cancel/all",
   TRADES: "/trades",
   DAI_APPROVAL: "/user/approve-proxy",
   USER_TOKEN: "/user/token",

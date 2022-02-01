@@ -133,6 +133,11 @@ describe("sportx", () => {
     expect(response.status).to.equal("success");
   });
 
+  it("should cancel all orders", async () => {
+    const response = await sportX.cancelAllOrders()
+    expect(response.status).to.equal("success")
+  })
+
   it("should cancel an order", async () => {
     const newOrder: INewOrder = {
       marketHash: testMarketHash,

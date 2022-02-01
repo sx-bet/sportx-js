@@ -230,9 +230,17 @@ export interface IMarket {
   group3?: string;
 }
 
-export interface ICancelOrderEventRequest {
+export interface ICancelEventOrdersRequest {
   signature: string;
   sportXeventId: string;
   salt: string;
   maker: string;
+  timestamp: number;
+}
+
+export interface ICancelAllOrdersRequest {
+  signature: string;
+  salt: string;
+  maker: string;
+  timestamp: number;
 }

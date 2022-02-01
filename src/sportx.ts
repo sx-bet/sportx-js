@@ -36,7 +36,8 @@ import {
 } from "./types/internal";
 import {
   IActiveLeague,
-  ICancelOrderEventRequest,
+  ICancelEventOrdersRequest,
+  ICancelAllOrdersRequest,
   IDetailedRelayerMakerOrder,
   IGetTradesRequest,
   ILeague,
@@ -59,6 +60,7 @@ import { convertToContractOrder } from "./utils/convert";
 import { tryParseJson } from "./utils/misc";
 import { getSidechainNetwork } from "./utils/networks";
 import {
+  getCancelAllOrdersEIP712Payload,
   getCancelOrderEIP712Payload,
   getCancelOrderEventsEIP712Payload,
   getFillOrderEIP712Payload,
@@ -96,6 +98,7 @@ export interface ISportX {
     orderHashes: string[],
     message?: string
   ): Promise<IRelayerResponse>;
+  cancelAllOrders(): Promise<IRelayerResponse>;
   cancelOrdersByEvent(sportXeventId: string): Promise<IRelayerResponse>;
   getPendingOrFailedBets(
     pendingBetsRequest: IPendingBetsRequest
@@ -165,27 +168,68 @@ class SportX implements ISportX {
     this.relayerUrl = apiUrl || RELAYER_URLS[env];
     this.sidechainNetwork = getSidechainNetwork(this.environment);
   }
-  public async cancelOrdersByEvent(
-    sportXeventId: string
-  ): Promise<IRelayerResponse> {
-    this.debug("cancelOrder");
-    if (typeof sportXeventId !== "string") {
-      throw new APISchemaError("sportXeventId is not a string");
-    }
+
+  public async cancelAllOrders(): Promise<IRelayerResponse> {
+    this.debug("cancelAllOrders");
     const salt = `0x${Buffer.from(randomBytes(32)).toString("hex")}`;
-    const cancelOrderPayload = getCancelOrderEventsEIP712Payload(
-      sportXeventId,
+    const timestamp = Math.floor(new Date().getTime() / 1000);
+    const cancelOrderPayload = getCancelAllOrdersEIP712Payload(
       salt,
+      timestamp,
       this.sidechainChainId
     );
     this.debug("Signing payload");
     this.debug(cancelOrderPayload);
     const signature = await this.getEip712Signature(cancelOrderPayload);
-    const payload: ICancelOrderEventRequest = {
+    const payload: ICancelAllOrdersRequest = {
+      signature,
+      salt,
+      maker: await this.sidechainSigningWallet.getAddress(),
+      timestamp,
+    };
+    this.debug("Cancel all orders payload");
+    this.debug(payload);
+    const response = await fetch(
+      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.CANCEL_ALL_ORDERS}`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+    const result = await this.tryParseResponse(
+      response,
+      "Can't cancel orders."
+    );
+    this.debug("Relayer response");
+    this.debug(result);
+    return result as IRelayerResponse;
+  }
+
+  public async cancelOrdersByEvent(
+    sportXeventId: string
+  ): Promise<IRelayerResponse> {
+    this.debug("cancelOrderByEvent");
+    if (typeof sportXeventId !== "string") {
+      throw new APISchemaError("sportXeventId is not a string");
+    }
+    const salt = `0x${Buffer.from(randomBytes(32)).toString("hex")}`;
+    const timestamp = Math.floor(new Date().getTime() / 1000);
+    const cancelOrderPayload = getCancelOrderEventsEIP712Payload(
+      sportXeventId,
+      salt,
+      timestamp,
+      this.sidechainChainId
+    );
+    this.debug("Signing payload");
+    this.debug(cancelOrderPayload);
+    const signature = await this.getEip712Signature(cancelOrderPayload);
+    const payload: ICancelEventOrdersRequest = {
       signature,
       sportXeventId,
       salt,
       maker: await this.sidechainSigningWallet.getAddress(),
+      timestamp,
     };
     this.debug("Cancel order event payload");
     this.debug(payload);
@@ -478,15 +522,14 @@ class SportX implements ISportX {
     const fillSalt = BigNumber.from(randomBytes(32));
     const solidityOrders = orders.map(convertToContractOrder);
     const orderHashes = solidityOrders.map(getOrderHash);
-    const finalFillDetailsMetadata: IFillDetailsMetadata =
-      fillDetailsMetadata || {
-        action: "N/A",
-        market: "N/A",
-        betting: "N/A",
-        stake: "N/A",
-        odds: "N/A",
-        returning: "N/A",
-      };
+    const finalFillDetailsMetadata: IFillDetailsMetadata = fillDetailsMetadata || {
+      action: "N/A",
+      market: "N/A",
+      betting: "N/A",
+      stake: "N/A",
+      odds: "N/A",
+      returning: "N/A",
+    };
     const fillDetails: IFillDetails = {
       ...finalFillDetailsMetadata,
       fills: {
@@ -751,6 +794,7 @@ class SportX implements ISportX {
     if (valid && response.status !== 200) {
       this.debug(response.status);
       this.debug(response.statusText);
+      this.debug(result);
       throw new APIError(
         result,
         `${errorMessage}. Response code: ${response.status}`

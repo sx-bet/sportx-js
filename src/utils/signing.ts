@@ -172,6 +172,7 @@ export function getMaticEip712Payload(
 export function getCancelOrderEventsEIP712Payload(
   sportXeventId: string,
   salt: string,
+  timestamp: number,
   chainId: number
 ) {
   const payload = {
@@ -182,7 +183,10 @@ export function getCancelOrderEventsEIP712Payload(
         { name: "chainId", type: "uint256" },
         { name: "salt", type: "bytes32" },
       ],
-      Details: [{ name: "sportXeventId", type: "string" }],
+      Details: [
+        { name: "sportXeventId", type: "string" },
+        { name: "timestamp", type: "uint256" },
+      ],
     },
     primaryType: "Details",
     domain: {
@@ -191,7 +195,34 @@ export function getCancelOrderEventsEIP712Payload(
       chainId,
       salt,
     },
-    message: { sportXeventId },
+    message: { sportXeventId, timestamp },
+  };
+  return payload;
+}
+
+export function getCancelAllOrdersEIP712Payload(
+  salt: string,
+  timestamp: number,
+  chainId: number
+) {
+  const payload = {
+    types: {
+      EIP712Domain: [
+        { name: "name", type: "string" },
+        { name: "version", type: "string" },
+        { name: "chainId", type: "uint256" },
+        { name: "salt", type: "bytes32" },
+      ],
+      Details: [{ name: "timestamp", type: "uint256" }],
+    },
+    primaryType: "Details",
+    domain: {
+      name: "CancelAllOrdersSportX",
+      version: "1.0",
+      chainId,
+      salt,
+    },
+    message: { timestamp },
   };
   return payload;
 }
