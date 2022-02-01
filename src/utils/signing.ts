@@ -169,6 +169,34 @@ export function getMaticEip712Payload(
   };
 }
 
+export function getCancelOrderEventsEIP712Payload(
+  sportXeventId: string,
+  salt: string,
+  chainId: number
+) {
+  const payload = {
+    types: {
+      EIP712Domain: [
+        { name: "name", type: "string" },
+        { name: "version", type: "string" },
+        { name: "chainId", type: "uint256" },
+        { name: "salt", type: "bytes32" },
+      ],
+      Details: [{ name: "sportXeventId", type: "string" }],
+    },
+    primaryType: "Details",
+    domain: {
+      name: "CancelOrderEventsSportX",
+      version: "1.0",
+      chainId,
+      salt,
+    },
+    message: { sportXeventId },
+  };
+  return payload;
+}
+
+
 export function getCancelOrderEIP712Payload(
   cancelDetails: ICancelDetails,
   chainId: number

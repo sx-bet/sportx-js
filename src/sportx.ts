@@ -23,7 +23,7 @@ import {
   RELAYER_URLS,
   SidechainNetworks,
   TOKEN_ADDRESSES,
-  TOKEN_TRANSFER_PROXY_ADDRESS
+  TOKEN_TRANSFER_PROXY_ADDRESS,
 } from "./constants";
 import { APIError } from "./errors/api_error";
 import { APISchemaError } from "./errors/schema_error";
@@ -32,7 +32,7 @@ import {
   IBaseTokenWrappers,
   ICancelDetails,
   IFillDetails,
-  IFillDetailsMetadata
+  IFillDetailsMetadata,
 } from "./types/internal";
 import {
   IActiveLeague,
@@ -52,17 +52,19 @@ import {
   IRelayerResponse,
   ISignedRelayerMakerOrder,
   ISport,
-  ITradesResponse
+  ITradesResponse,
+  ICancelOrderEventRequest,
 } from "./types/relayer";
 import { convertToContractOrder } from "./utils/convert";
 import { tryParseJson } from "./utils/misc";
 import { getSidechainNetwork } from "./utils/networks";
 import {
   getCancelOrderEIP712Payload,
+  getCancelOrderEventsEIP712Payload,
   getFillOrderEIP712Payload,
   getMaticEip712Payload,
   getOrderHash,
-  getOrderSignature
+  getOrderSignature,
 } from "./utils/signing";
 import {
   isAddress,
@@ -71,7 +73,7 @@ import {
   validateIGetPendingBetsRequest,
   validateIGetTradesRequest,
   validateINewOrderSchema,
-  validateISignedRelayerMakerOrder
+  validateISignedRelayerMakerOrder,
 } from "./utils/validation";
 
 export interface ISportX {
@@ -94,6 +96,7 @@ export interface ISportX {
     orderHashes: string[],
     message?: string
   ): Promise<IRelayerResponse>;
+  cancelOrdersByEvent(sportXeventId: string): Promise<IRelayerResponse>;
   getPendingOrFailedBets(
     pendingBetsRequest: IPendingBetsRequest
   ): Promise<IPendingBet[]>;
@@ -134,7 +137,8 @@ class SportX implements ISportX {
     env: Environments,
     customSidechainProviderUrl?: string,
     privateKey?: string,
-    sidechainProvider?: Web3Provider
+    sidechainProvider?: Web3Provider,
+    apiUrl?: string,
   ) {
     let sidechainProviderUrl = DEFAULT_MATIC_RPL_URLS[env];
     if (customSidechainProviderUrl) {
@@ -158,8 +162,48 @@ class SportX implements ISportX {
       throw new Error(`Invalid environment: ${env}`);
     }
     this.environment = env;
-    this.relayerUrl = RELAYER_URLS[env];
+    this.relayerUrl = apiUrl || RELAYER_URLS[env];
     this.sidechainNetwork = getSidechainNetwork(this.environment);
+  }
+  public async cancelOrdersByEvent(
+    sportXeventId: string
+  ): Promise<IRelayerResponse> {
+    this.debug("cancelOrder");
+    if (typeof sportXeventId !== "string") {
+      throw new APISchemaError("sportXeventId is not a string");
+    }
+    const salt = `0x${Buffer.from(randomBytes(32)).toString("hex")}`
+    const cancelOrderPayload = getCancelOrderEventsEIP712Payload(
+      sportXeventId,
+      salt,
+      this.sidechainChainId
+    );
+    this.debug("Signing payload")
+    this.debug(cancelOrderPayload)
+    const signature = await this.getEip712Signature(cancelOrderPayload);
+    const payload: ICancelOrderEventRequest = {
+      signature,
+      sportXeventId,
+      salt,
+      maker: await this.sidechainSigningWallet.getAddress(),
+    };
+    this.debug("Cancel order event payload");
+    this.debug(payload);
+    const response = await fetch(
+      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.CANCEL_EVENT_ORDERS}`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+    const result = await this.tryParseResponse(
+      response,
+      "Can't cancel orders."
+    );
+    this.debug("Relayer response");
+    this.debug(result);
+    return result as IRelayerResponse;
   }
 
   public async getPopularMarkets() {
@@ -185,7 +229,7 @@ class SportX implements ISportX {
       throw new Error("Already initialized");
     }
     this.ably = new ably.Realtime.Promise({
-      authUrl: `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.USER_TOKEN}`
+      authUrl: `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.USER_TOKEN}`,
     });
     await new Promise<void>((resolve, reject) => {
       this.ably.connection.on("connected", () => {
@@ -263,7 +307,7 @@ class SportX implements ISportX {
     this.debug("getLiveScores");
     if (
       !Array.isArray(eventIds) ||
-      !eventIds.every(eventId => typeof eventId === "string")
+      !eventIds.every((eventId) => typeof eventId === "string")
     ) {
       throw new APISchemaError("eventIds is not an array of strings");
     }
@@ -272,7 +316,7 @@ class SportX implements ISportX {
       {
         method: "POST",
         body: JSON.stringify({ sportXEventIds: eventIds }),
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       }
     );
     const result = await this.tryParseResponse(
@@ -298,7 +342,7 @@ class SportX implements ISportX {
       ...(leagueId !== undefined && { leagueId }),
       ...(eventId !== undefined && { eventId }),
       ...(liveOnly !== undefined && { liveOnly }),
-      ...(betGroup !== undefined && { betGroup })
+      ...(betGroup !== undefined && { betGroup }),
     });
     const url = `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.ACTIVE_MARKETS}?${qs}`;
     const response = await fetch(url);
@@ -309,7 +353,7 @@ class SportX implements ISportX {
     this.debug("Relayer response");
     this.debug(result);
     const {
-      data: { markets }
+      data: { markets },
     } = result;
     return markets as IMarket[];
   }
@@ -317,11 +361,11 @@ class SportX implements ISportX {
   public async marketLookup(marketHashes: string[]): Promise<IMarket[]> {
     this.debug("marketLookup");
     const payload: IRelayerHistoricalMarketRequest = {
-      marketHashes
+      marketHashes,
     };
     if (
       !Array.isArray(marketHashes) ||
-      !marketHashes.every(hash => isHexString(hash))
+      !marketHashes.every((hash) => isHexString(hash))
     ) {
       throw new APISchemaError("marketHashes is not a hex string ");
     }
@@ -330,7 +374,7 @@ class SportX implements ISportX {
       {
         method: "POST",
         body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       }
     );
     const result = await this.tryParseResponse(
@@ -346,14 +390,14 @@ class SportX implements ISportX {
   public async newOrder(orders: INewOrder[]) {
     this.debug("newOrder");
     const validation = orders.map(validateINewOrderSchema);
-    validation.forEach(val => {
+    validation.forEach((val) => {
       if (val !== "OK") {
         throw new APISchemaError(val);
       }
     });
     const walletAddress = await this.sidechainSigningWallet.getAddress();
     const apiOrders = await Promise.all(
-      orders.map(async order => {
+      orders.map(async (order) => {
         const bigNumBetSize = BigNumber.from(order.totalBetSize);
         const salt = BigNumber.from(randomBytes(32)).toString();
         const apiMakerOrder: IRelayerMakerOrder = {
@@ -366,7 +410,7 @@ class SportX implements ISportX {
           executor: this.metadata.executorAddress,
           baseToken: order.baseToken,
           salt,
-          isMakerBettingOutcomeOne: order.isMakerBettingOutcomeOne
+          isMakerBettingOutcomeOne: order.isMakerBettingOutcomeOne,
         };
         const signature = await getOrderSignature(
           apiMakerOrder,
@@ -374,7 +418,7 @@ class SportX implements ISportX {
         );
         const signedApiMakerOrder: ISignedRelayerMakerOrder = {
           ...apiMakerOrder,
-          signature
+          signature,
         };
         return signedApiMakerOrder;
       })
@@ -387,7 +431,7 @@ class SportX implements ISportX {
       {
         method: "POST",
         body: JSON.stringify({ orders: apiOrders }),
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       }
     );
     const result = await this.tryParseResponse(
@@ -407,7 +451,7 @@ class SportX implements ISportX {
     approveProxyPayload?: IApproveSpenderPayload
   ): Promise<IRelayerResponse> {
     this.debug("fillOrders");
-    orders.forEach(order => {
+    orders.forEach((order) => {
       const validation = validateISignedRelayerMakerOrder(order);
       if (validation !== "OK") {
         this.debug("One of the orders is malformed");
@@ -428,7 +472,7 @@ class SportX implements ISportX {
     if (!Array.isArray(takerAmounts)) {
       throw new APISchemaError("takerAmounts is not an array");
     }
-    if (!takerAmounts.every(amount => isPositiveBigNumber(amount))) {
+    if (!takerAmounts.every((amount) => isPositiveBigNumber(amount))) {
       throw new APISchemaError("takerAmounts has some invalid number strings");
     }
     const fillSalt = BigNumber.from(randomBytes(32));
@@ -440,17 +484,17 @@ class SportX implements ISportX {
       betting: "N/A",
       stake: "N/A",
       odds: "N/A",
-      returning: "N/A"
+      returning: "N/A",
     };
     const fillDetails: IFillDetails = {
       ...finalFillDetailsMetadata,
       fills: {
         orders: orders.map(convertToContractOrder),
-        makerSigs: orders.map(order => order.signature),
+        makerSigs: orders.map((order) => order.signature),
         takerAmounts: takerAmounts.map(BigNumber.from),
         fillSalt,
-        beneficiary: AddressZero
-      }
+        beneficiary: AddressZero,
+      },
     };
     const fillOrderPayload = getFillOrderEIP712Payload(
       fillDetails,
@@ -469,7 +513,7 @@ class SportX implements ISportX {
       fillSalt: fillSalt.toString(),
       ...finalFillDetailsMetadata,
       affiliateAddress,
-      approveProxyPayload
+      approveProxyPayload,
     };
     if (approveProxyPayload) {
       this.debug(`approveProxyPayload`);
@@ -482,7 +526,7 @@ class SportX implements ISportX {
       {
         method: "POST",
         body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       }
     );
     const result = await this.tryParseResponse(response, "Can't fill orders.");
@@ -496,7 +540,7 @@ class SportX implements ISportX {
     if (!Array.isArray(orderHashes)) {
       throw new APISchemaError("orderHashes is not an array");
     }
-    if (!orderHashes.every(hash => isHexString(hash))) {
+    if (!orderHashes.every((hash) => isHexString(hash))) {
       throw new APISchemaError("orderHashes has some invalid order hashes.");
     }
     if (message && typeof message !== "string") {
@@ -505,16 +549,17 @@ class SportX implements ISportX {
     const finalMessage = message || "N/A";
     const cancelDetails: ICancelDetails = {
       orders: orderHashes,
-      message: finalMessage
+      message: finalMessage,
     };
     const cancelOrderPayload = getCancelOrderEIP712Payload(
       cancelDetails,
       this.sidechainChainId
     );
     const cancelSignature = await this.getEip712Signature(cancelOrderPayload);
+    console.log(cancelSignature);
     const payload: IRelayerCancelOrderRequest = {
       ...cancelDetails,
-      cancelSignature
+      cancelSignature,
     };
     this.debug("Cancel order payload");
     this.debug(payload);
@@ -523,7 +568,7 @@ class SportX implements ISportX {
       {
         method: "POST",
         body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       }
     );
     const result = await this.tryParseResponse(
@@ -549,8 +594,8 @@ class SportX implements ISportX {
         method: "POST",
         body: JSON.stringify(request),
         headers: {
-          "Content-Type": "application/json"
-        }
+          "Content-Type": "application/json",
+        },
       }
     );
     const result = await this.tryParseResponse(
@@ -560,7 +605,7 @@ class SportX implements ISportX {
     this.debug("Relayer response");
     this.debug(result);
     const {
-      data: { bets }
+      data: { bets },
     } = result;
     const pendingBets: IPendingBet[] = bets;
     return pendingBets;
@@ -579,7 +624,7 @@ class SportX implements ISportX {
       {
         method: "POST",
         body: JSON.stringify(tradeRequest),
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       }
     );
     const result = await this.tryParseResponse(response, "Can't get trades");
@@ -595,7 +640,7 @@ class SportX implements ISportX {
     baseToken?: string
   ): Promise<IDetailedRelayerMakerOrder[]> {
     this.debug("getOrders");
-    if (marketHashes && !marketHashes.every(hash => isHexString(hash))) {
+    if (marketHashes && !marketHashes.every((hash) => isHexString(hash))) {
       throw new APISchemaError(
         `One of the supplied market hashes is not a valid hex string.`
       );
@@ -609,7 +654,7 @@ class SportX implements ISportX {
     const payload = {
       ...(marketHashes && { marketHashes }),
       ...(maker && { maker }),
-      ...(baseToken && { baseToken })
+      ...(baseToken && { baseToken }),
     };
     const response = await fetch(
       `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.ORDERS}`,
@@ -617,8 +662,8 @@ class SportX implements ISportX {
         method: "POST",
         body: JSON.stringify(payload),
         headers: {
-          "Content-Type": "application/json"
-        }
+          "Content-Type": "application/json",
+        },
       }
     );
     const result = await this.tryParseResponse(response, "Can't get orders");
@@ -652,7 +697,7 @@ class SportX implements ISportX {
       spender: TOKEN_TRANSFER_PROXY_ADDRESS[this.environment],
       tokenAddress: token,
       amount: MaxUint256.toString(),
-      signature
+      signature,
     };
     const response = await fetch(
       `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.DAI_APPROVAL}`,
@@ -660,8 +705,8 @@ class SportX implements ISportX {
         method: "POST",
         body: JSON.stringify(payload),
         headers: {
-          "Content-Type": "application/json"
-        }
+          "Content-Type": "application/json",
+        },
       }
     );
     const result = await this.tryParseResponse(
@@ -738,13 +783,15 @@ export async function newSportX(
   env: Environments,
   customSidechainProviderUrl?: string,
   privateKey?: string,
-  sidechainProvider?: Web3Provider
+  sidechainProvider?: Web3Provider,
+  apiUrl?: string
 ) {
   const sportX = new SportX(
     env,
     customSidechainProviderUrl,
     privateKey,
-    sidechainProvider
+    sidechainProvider,
+    apiUrl
   );
   await sportX.init();
   return sportX;

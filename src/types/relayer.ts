@@ -229,3 +229,10 @@ export interface IMarket {
   group2?: string;
   group3?: string;
 }
+
+export interface ICancelOrderEventRequest {
+  signature: string;
+  sportXeventId: string;
+  salt: string;
+  maker: string;
+}

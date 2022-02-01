@@ -36,7 +36,7 @@ export const RELAYER_URLS = {
 
 export const DEFAULT_MATIC_RPL_URLS = {
   [Environments.MUMBAI]: "https://rpc-mumbai.matic.today",
-  [Environments.PRODUCTION]: "https://rpc-mainnet.matic.network"
+  [Environments.PRODUCTION]: "https://polygon-rpc.com/"
 };
 
 export const TOKEN_TRANSFER_PROXY_ADDRESS = {
@@ -113,6 +113,7 @@ export const RELAYER_HTTP_ENDPOINTS = {
   NEW_ORDER: "/orders/new",
   FILL_ORDERS: "/orders/fill",
   CANCEL_ORDERS: "/orders/cancel",
+  CANCEL_EVENT_ORDERS: "/orders/cancel/event",
   TRADES: "/trades",
   DAI_APPROVAL: "/user/approve-proxy",
   USER_TOKEN: "/user/token",
