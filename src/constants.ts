@@ -112,7 +112,7 @@ export const RELAYER_HTTP_ENDPOINTS = {
   HISTORICAL_MARKETS: "/markets/find",
   NEW_ORDER: "/orders/new",
   FILL_ORDERS: "/orders/fill",
-  CANCEL_ORDERS: "/orders/cancel",
+  CANCEL_ORDERS: "/orders/cancel/v2",
   CANCEL_EVENT_ORDERS: "/orders/cancel/event",
   CANCEL_ALL_ORDERS: "/orders/cancel/all",
   TRADES: "/trades",

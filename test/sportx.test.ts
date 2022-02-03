@@ -120,7 +120,6 @@ describe("sportx", () => {
       ).toString(),
       percentageOdds: convertToAPIPercentageOdds(0.5).toString(),
       expiry: Math.floor((Date.now() + 3600 * 1000) / 1000),
-
       isMakerBettingOutcomeOne: true,
       baseToken: TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI],
     };
@@ -134,9 +133,9 @@ describe("sportx", () => {
   });
 
   it("should cancel all orders", async () => {
-    const response = await sportX.cancelAllOrders()
-    expect(response.status).to.equal("success")
-  })
+    const response = await sportX.cancelAllOrders();
+    expect(response.status).to.equal("success");
+  });
 
   it("should cancel an order", async () => {
     const newOrder: INewOrder = {
@@ -153,7 +152,7 @@ describe("sportx", () => {
     const {
       data: { orders },
     } = await sportX.newOrder([newOrder]);
-    const response = await sportX.cancelOrder(orders, "Cancel Orders");
+    const response = await sportX.cancelOrder(orders);
     expect(response.status).to.equal("success");
   });
 

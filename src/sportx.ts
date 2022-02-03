@@ -30,7 +30,6 @@ import { APISchemaError } from "./errors/schema_error";
 import {
   IApproveSpenderPayload,
   IBaseTokenWrappers,
-  ICancelDetails,
   IFillDetails,
   IFillDetailsMetadata,
 } from "./types/internal";
@@ -47,7 +46,7 @@ import {
   INewOrder,
   IPendingBet,
   IPendingBetsRequest,
-  IRelayerCancelOrderRequest,
+  ICancelOrderRequest,
   IRelayerHistoricalMarketRequest,
   IRelayerMakerOrder,
   IRelayerMetaFillOrderRequest,
@@ -95,8 +94,7 @@ export interface ISportX {
   marketLookup(marketHashes: string[]): Promise<IMarket[]>;
   newOrder(orders: INewOrder[]): Promise<IRelayerResponse>;
   cancelOrder(
-    orderHashes: string[],
-    message?: string
+    orderHashes: string[]
   ): Promise<IRelayerResponse>;
   cancelAllOrders(): Promise<IRelayerResponse>;
   cancelOrdersByEvent(sportXeventId: string): Promise<IRelayerResponse>;
@@ -167,6 +165,51 @@ class SportX implements ISportX {
     this.environment = env;
     this.relayerUrl = apiUrl || RELAYER_URLS[env];
     this.sidechainNetwork = getSidechainNetwork(this.environment);
+  }
+
+  public async cancelOrder(orderHashes: string[]): Promise<IRelayerResponse> {
+    this.debug("cancelOrder");
+    if (!Array.isArray(orderHashes)) {
+      throw new APISchemaError("orderHashes is not an array");
+    }
+    if (!orderHashes.every((hash) => isHexString(hash))) {
+      throw new APISchemaError("orderHashes has some invalid order hashes.");
+    }
+    const salt = `0x${Buffer.from(randomBytes(32)).toString("hex")}`;
+    const timestamp = Math.floor(new Date().getTime() / 1000);
+    const cancelOrderPayload = getCancelOrderEIP712Payload(
+      orderHashes,
+      salt,
+      timestamp,
+      this.sidechainChainId
+    );
+    this.debug("Signing payload");
+    this.debug(cancelOrderPayload);
+    const signature = await this.getEip712Signature(cancelOrderPayload);
+    const payload: ICancelOrderRequest = {
+      signature,
+      orderHashes,
+      salt,
+      maker: await this.sidechainSigningWallet.getAddress(),
+      timestamp
+    };
+    this.debug("Cancel order payload");
+    this.debug(payload);
+    const response = await fetch(
+      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.CANCEL_ORDERS}`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+    const result = await this.tryParseResponse(
+      response,
+      "Can't cancel orders."
+    );
+    this.debug("Relayer response");
+    this.debug(result);
+    return result as IRelayerResponse;
   }
 
   public async cancelAllOrders(): Promise<IRelayerResponse> {
@@ -574,50 +617,6 @@ class SportX implements ISportX {
       }
     );
     const result = await this.tryParseResponse(response, "Can't fill orders.");
-    this.debug("Relayer response");
-    this.debug(result);
-    return result as IRelayerResponse;
-  }
-
-  public async cancelOrder(orderHashes: string[], message?: string) {
-    this.debug("cancelOrder");
-    if (!Array.isArray(orderHashes)) {
-      throw new APISchemaError("orderHashes is not an array");
-    }
-    if (!orderHashes.every((hash) => isHexString(hash))) {
-      throw new APISchemaError("orderHashes has some invalid order hashes.");
-    }
-    if (message && typeof message !== "string") {
-      throw new APISchemaError("message is not a string");
-    }
-    const finalMessage = message || "N/A";
-    const cancelDetails: ICancelDetails = {
-      orders: orderHashes,
-      message: finalMessage,
-    };
-    const cancelOrderPayload = getCancelOrderEIP712Payload(
-      cancelDetails,
-      this.sidechainChainId
-    );
-    const cancelSignature = await this.getEip712Signature(cancelOrderPayload);
-    const payload: IRelayerCancelOrderRequest = {
-      ...cancelDetails,
-      cancelSignature,
-    };
-    this.debug("Cancel order payload");
-    this.debug(payload);
-    const response = await fetch(
-      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.CANCEL_ORDERS}`,
-      {
-        method: "POST",
-        body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" },
-      }
-    );
-    const result = await this.tryParseResponse(
-      response,
-      "Can't cancel orders."
-    );
     this.debug("Relayer response");
     this.debug(result);
     return result as IRelayerResponse;

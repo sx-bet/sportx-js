@@ -228,7 +228,9 @@ export function getCancelAllOrdersEIP712Payload(
 }
 
 export function getCancelOrderEIP712Payload(
-  cancelDetails: ICancelDetails,
+  orderHashes: string[],
+  salt: string,
+  timestamp: number,
   chainId: number
 ) {
   const payload = {
@@ -237,19 +239,21 @@ export function getCancelOrderEIP712Payload(
         { name: "name", type: "string" },
         { name: "version", type: "string" },
         { name: "chainId", type: "uint256" },
+        { name: "salt", type: "bytes32" },
       ],
       Details: [
-        { name: "message", type: "string" },
-        { name: "orders", type: "string[]" },
+        { name: "orderHashes", type: "string[]" },
+        { name: "timestamp", type: "uint256" },
       ],
     },
     primaryType: "Details",
     domain: {
-      name: "CancelOrderSportX",
+      name: "CancelOrderV2SportX",
       version: "1.0",
       chainId,
+      salt,
     },
-    message: cancelDetails,
+    message: { orderHashes, timestamp },
   };
   return payload;
 }
