@@ -35,8 +35,9 @@ import {
 } from "./types/internal";
 import {
   IActiveLeague,
-  ICancelEventOrdersRequest,
   ICancelAllOrdersRequest,
+  ICancelEventOrdersRequest,
+  ICancelOrderRequest,
   IDetailedRelayerMakerOrder,
   IGetTradesRequest,
   ILeague,
@@ -46,7 +47,6 @@ import {
   INewOrder,
   IPendingBet,
   IPendingBetsRequest,
-  ICancelOrderRequest,
   IRelayerHistoricalMarketRequest,
   IRelayerMakerOrder,
   IRelayerMetaFillOrderRequest,
@@ -93,9 +93,7 @@ export interface ISportX {
   getPopularMarkets(): Promise<IMarket[]>;
   marketLookup(marketHashes: string[]): Promise<IMarket[]>;
   newOrder(orders: INewOrder[]): Promise<IRelayerResponse>;
-  cancelOrder(
-    orderHashes: string[]
-  ): Promise<IRelayerResponse>;
+  cancelOrder(orderHashes: string[]): Promise<IRelayerResponse>;
   cancelAllOrders(): Promise<IRelayerResponse>;
   cancelOrdersByEvent(sportXeventId: string): Promise<IRelayerResponse>;
   getPendingOrFailedBets(
@@ -191,7 +189,7 @@ class SportX implements ISportX {
       orderHashes,
       salt,
       maker: await this.sidechainSigningWallet.getAddress(),
-      timestamp
+      timestamp,
     };
     this.debug("Cancel order payload");
     this.debug(payload);
@@ -565,14 +563,15 @@ class SportX implements ISportX {
     const fillSalt = BigNumber.from(randomBytes(32));
     const solidityOrders = orders.map(convertToContractOrder);
     const orderHashes = solidityOrders.map(getOrderHash);
-    const finalFillDetailsMetadata: IFillDetailsMetadata = fillDetailsMetadata || {
-      action: "N/A",
-      market: "N/A",
-      betting: "N/A",
-      stake: "N/A",
-      odds: "N/A",
-      returning: "N/A",
-    };
+    const finalFillDetailsMetadata: IFillDetailsMetadata =
+      fillDetailsMetadata || {
+        action: "N/A",
+        market: "N/A",
+        betting: "N/A",
+        stake: "N/A",
+        odds: "N/A",
+        returning: "N/A",
+      };
     const fillDetails: IFillDetails = {
       ...finalFillDetailsMetadata,
       fills: {
