@@ -45,7 +45,7 @@
     "@types/node-fetch": "^2.3.5",
     "chai": "^4.2.0",
     "mocha": "^9.1.3",
-    "prettier": "^1.17.1",
+    "prettier": "^2.5.1",
     "tslint": "^5.16.0",
     "tslint-config-prettier": "^1.18.0",
     "tslint-no-unused-expression-chai": "^0.1.4",
@@ -68,5 +68,5 @@
     "test": "rm -rf dist/ && tsc && mocha \"dist/test/*.js\" --timeout 120000 --exit --bail",
     "format": "tslint --fix -c tslint.json 'test/**/*.ts' 'src/**/*.ts' && prettier --write 'test/**/*.ts' 'src/**/*.ts'"
   },
-  "version": "9.0.0"
+  "version": "10.0.0"
 }

@@ -17,12 +17,6 @@ export interface ISignedRelayerMakerOrder extends IRelayerMakerOrder {
   signature: string;
 }
 
-export interface IRelayerCancelOrderRequest extends ICancelDetails {
-  message: string;
-  orders: string[];
-  cancelSignature: string;
-}
-
 export interface IRelayerMarketOrderRequest {
   marketHash: string;
   takerPayAmount: string;
@@ -187,7 +181,7 @@ export enum BetStatus {
   PENDING = "PENDING",
   SUCCESS = "SUCCESS",
   FAIL = "FAIL",
-  TIMEOUT = "TIMEOUT"
+  TIMEOUT = "TIMEOUT",
 }
 
 export interface IPendingBet {
@@ -228,4 +222,27 @@ export interface IMarket {
   group1: string;
   group2?: string;
   group3?: string;
+}
+
+export interface ICancelEventOrdersRequest {
+  signature: string;
+  sportXeventId: string;
+  salt: string;
+  maker: string;
+  timestamp: number;
+}
+
+export interface ICancelAllOrdersRequest {
+  signature: string;
+  salt: string;
+  maker: string;
+  timestamp: number;
+}
+
+export interface ICancelOrderRequest {
+  signature: string;
+  orderHashes: string[];
+  salt: string;
+  maker: string;
+  timestamp: number;
 }

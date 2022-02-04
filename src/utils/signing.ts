@@ -4,7 +4,7 @@ import { keccak256 as solidityKeccak256 } from "@ethersproject/solidity";
 import {
   ICancelDetails,
   IContractOrder,
-  IFillDetails
+  IFillDetails,
 } from "../types/internal";
 import { IRelayerMakerOrder } from "../types/relayer";
 import { convertToContractOrder } from "./convert";
@@ -28,7 +28,7 @@ export function getOrderHash(order: IContractOrder): string {
       "uint256",
       "address",
       "address",
-      "bool"
+      "bool",
     ],
     [
       order.marketHash,
@@ -39,7 +39,7 @@ export function getOrderHash(order: IContractOrder): string {
       order.salt,
       order.maker,
       order.executor,
-      order.isMakerBettingOutcomeOne
+      order.isMakerBettingOutcomeOne,
     ]
   );
 }
@@ -64,7 +64,7 @@ export function getFillOrderEIP712Payload(
         { name: "name", type: "string" },
         { name: "version", type: "string" },
         { name: "chainId", type: "uint256" },
-        { name: "verifyingContract", type: "address" }
+        { name: "verifyingContract", type: "address" },
       ],
       Details: [
         { name: "action", type: "string" },
@@ -73,14 +73,14 @@ export function getFillOrderEIP712Payload(
         { name: "stake", type: "string" },
         { name: "odds", type: "string" },
         { name: "returning", type: "string" },
-        { name: "fills", type: "FillObject" }
+        { name: "fills", type: "FillObject" },
       ],
       FillObject: [
         { name: "orders", type: "Order[]" },
         { name: "makerSigs", type: "bytes[]" },
         { name: "takerAmounts", type: "uint256[]" },
         { name: "fillSalt", type: "uint256" },
-        { name: "beneficiary", type: "address" }
+        { name: "beneficiary", type: "address" },
       ],
       Order: [
         { name: "marketHash", type: "bytes32" },
@@ -91,15 +91,15 @@ export function getFillOrderEIP712Payload(
         { name: "salt", type: "uint256" },
         { name: "maker", type: "address" },
         { name: "executor", type: "address" },
-        { name: "isMakerBettingOutcomeOne", type: "bool" }
-      ]
+        { name: "isMakerBettingOutcomeOne", type: "bool" },
+      ],
     },
     primaryType: "Details",
     domain: {
       name: "SportX",
       version,
       chainId,
-      verifyingContract
+      verifyingContract,
     },
     message: {
       action: fillDetails.action,
@@ -110,7 +110,7 @@ export function getFillOrderEIP712Payload(
       returning: fillDetails.returning,
       fills: {
         makerSigs: fillDetails.fills.makerSigs,
-        orders: fillDetails.fills.orders.map(order => ({
+        orders: fillDetails.fills.orders.map((order) => ({
           marketHash: order.marketHash,
           baseToken: order.baseToken,
           totalBetSize: order.totalBetSize.toString(),
@@ -119,15 +119,15 @@ export function getFillOrderEIP712Payload(
           salt: order.salt.toString(),
           maker: order.maker,
           executor: order.executor,
-          isMakerBettingOutcomeOne: order.isMakerBettingOutcomeOne
+          isMakerBettingOutcomeOne: order.isMakerBettingOutcomeOne,
         })),
-        takerAmounts: fillDetails.fills.takerAmounts.map(takerAmount =>
+        takerAmounts: fillDetails.fills.takerAmounts.map((takerAmount) =>
           takerAmount.toString()
         ),
         fillSalt: fillDetails.fills.fillSalt.toString(),
-        beneficiary: fillDetails.fills.beneficiary
-      }
-    }
+        beneficiary: fillDetails.fills.beneficiary,
+      },
+    },
   };
   return payload;
 }
@@ -146,31 +146,33 @@ export function getMaticEip712Payload(
         { name: "name", type: "string" },
         { name: "version", type: "string" },
         { name: "verifyingContract", type: "address" },
-        { name: "salt", type: "bytes32" }
+        { name: "salt", type: "bytes32" },
       ],
       MetaTransaction: [
         { name: "nonce", type: "uint256" },
         { name: "from", type: "address" },
-        { name: "functionSignature", type: "bytes" }
-      ]
+        { name: "functionSignature", type: "bytes" },
+      ],
     },
     domain: {
       name: domainName,
       version: "1",
       salt: hexZeroPad(hexlify(chainId), 32),
-      verifyingContract
+      verifyingContract,
     },
     message: {
       nonce,
       from,
-      functionSignature: abiEncodedFunctionSig
+      functionSignature: abiEncodedFunctionSig,
     },
-    primaryType: "MetaTransaction"
+    primaryType: "MetaTransaction",
   };
 }
 
-export function getCancelOrderEIP712Payload(
-  cancelDetails: ICancelDetails,
+export function getCancelOrderEventsEIP712Payload(
+  sportXeventId: string,
+  salt: string,
+  timestamp: number,
   chainId: number
 ) {
   const payload = {
@@ -178,20 +180,80 @@ export function getCancelOrderEIP712Payload(
       EIP712Domain: [
         { name: "name", type: "string" },
         { name: "version", type: "string" },
-        { name: "chainId", type: "uint256" }
+        { name: "chainId", type: "uint256" },
+        { name: "salt", type: "bytes32" },
       ],
       Details: [
-        { name: "message", type: "string" },
-        { name: "orders", type: "string[]" }
-      ]
+        { name: "sportXeventId", type: "string" },
+        { name: "timestamp", type: "uint256" },
+      ],
     },
     primaryType: "Details",
     domain: {
-      name: "CancelOrderSportX",
+      name: "CancelOrderEventsSportX",
       version: "1.0",
-      chainId
+      chainId,
+      salt,
     },
-    message: cancelDetails
+    message: { sportXeventId, timestamp },
+  };
+  return payload;
+}
+
+export function getCancelAllOrdersEIP712Payload(
+  salt: string,
+  timestamp: number,
+  chainId: number
+) {
+  const payload = {
+    types: {
+      EIP712Domain: [
+        { name: "name", type: "string" },
+        { name: "version", type: "string" },
+        { name: "chainId", type: "uint256" },
+        { name: "salt", type: "bytes32" },
+      ],
+      Details: [{ name: "timestamp", type: "uint256" }],
+    },
+    primaryType: "Details",
+    domain: {
+      name: "CancelAllOrdersSportX",
+      version: "1.0",
+      chainId,
+      salt,
+    },
+    message: { timestamp },
+  };
+  return payload;
+}
+
+export function getCancelOrderEIP712Payload(
+  orderHashes: string[],
+  salt: string,
+  timestamp: number,
+  chainId: number
+) {
+  const payload = {
+    types: {
+      EIP712Domain: [
+        { name: "name", type: "string" },
+        { name: "version", type: "string" },
+        { name: "chainId", type: "uint256" },
+        { name: "salt", type: "bytes32" },
+      ],
+      Details: [
+        { name: "orderHashes", type: "string[]" },
+        { name: "timestamp", type: "uint256" },
+      ],
+    },
+    primaryType: "Details",
+    domain: {
+      name: "CancelOrderV2SportX",
+      version: "1.0",
+      chainId,
+      salt,
+    },
+    message: { orderHashes, timestamp },
   };
   return payload;
 }
