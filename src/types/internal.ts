@@ -1,7 +1,7 @@
 import { BigNumber } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
 import { Web3Provider } from "@ethersproject/providers";
-import { Environments } from "src/constants";
+import { Environments } from "../constants";
 
 export interface IContractOrder {
   marketHash: string;

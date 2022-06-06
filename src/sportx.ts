@@ -214,7 +214,10 @@ class SportX implements ISportX {
       {
         method: "POST",
         body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Api-Key": this.apiKey,
+        },
       }
     );
     const result = await this.tryParseResponse(
@@ -251,7 +254,10 @@ class SportX implements ISportX {
       {
         method: "POST",
         body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Api-Key": this.apiKey,
+        },
       }
     );
     const result = await this.tryParseResponse(
@@ -295,7 +301,10 @@ class SportX implements ISportX {
       {
         method: "POST",
         body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Api-Key": this.apiKey,
+        },
       }
     );
     const result = await this.tryParseResponse(
@@ -417,7 +426,10 @@ class SportX implements ISportX {
       {
         method: "POST",
         body: JSON.stringify({ sportXEventIds: eventIds }),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Api-Key": this.apiKey,
+        },
       }
     );
     const result = await this.tryParseResponse(
@@ -475,7 +487,10 @@ class SportX implements ISportX {
       {
         method: "POST",
         body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Api-Key": this.apiKey,
+        },
       }
     );
     const result = await this.tryParseResponse(
@@ -532,7 +547,10 @@ class SportX implements ISportX {
       {
         method: "POST",
         body: JSON.stringify({ orders: apiOrders }),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Api-Key": this.apiKey,
+        },
       }
     );
     const result = await this.tryParseResponse(
@@ -655,6 +673,7 @@ class SportX implements ISportX {
         body: JSON.stringify(request),
         headers: {
           "Content-Type": "application/json",
+          "X-Api-Key": this.apiKey,
         },
       }
     );
@@ -684,7 +703,10 @@ class SportX implements ISportX {
       {
         method: "POST",
         body: JSON.stringify(tradeRequest),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Api-Key": this.apiKey,
+        },
       }
     );
     const result = await this.tryParseResponse(response, "Can't get trades");
@@ -723,6 +745,7 @@ class SportX implements ISportX {
         body: JSON.stringify(payload),
         headers: {
           "Content-Type": "application/json",
+          "X-Api-Key": this.apiKey,
         },
       }
     );
