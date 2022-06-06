@@ -35,6 +35,7 @@ import {
   IBaseTokenWrappers,
   IFillDetails,
   IFillDetailsMetadata,
+  ISportXArgs,
 } from "./types/internal";
 import {
   IActiveLeague,
@@ -134,13 +135,15 @@ class SportX implements ISportX {
   private sidechainChainId!: number;
   private network: SidechainNetworks | Networks;
   private baseTokenWrappers: IBaseTokenWrappers = {};
+  private apiKey: string;
 
   constructor(
     env: Environments,
     customProviderUrl?: string,
     privateKey?: string,
     customProvider?: Web3Provider,
-    apiUrl?: string
+    apiUrl?: string,
+    apiKey?: string
   ) {
     if (!Object.values(Environments).includes(env)) {
       throw new Error(`Invalid environment: ${env}`);
@@ -158,7 +161,6 @@ class SportX implements ISportX {
     if (privateKey && !isHexString(privateKey)) {
       throw new Error(`${privateKey} is not a valid private key.`);
     } else if (privateKey) {
-      // this.provider = new JsonRpcProvider(providerUrl);
       this.provider = new StaticJsonRpcProvider(
         providerUrl,
         CHAIN_IDS[this.network],
@@ -173,6 +175,8 @@ class SportX implements ISportX {
     } else {
       throw new Error(`Neither privateKey nor both providers provided.`);
     }
+
+    this.apiKey = apiKey || "";
 
     this.relayerUrl = apiUrl || RELAYER_URLS[env];
   }
@@ -624,7 +628,10 @@ class SportX implements ISportX {
       {
         method: "POST",
         body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Api-Key": this.apiKey,
+        },
       }
     );
     const result = await this.tryParseResponse(response, "Can't fill orders.");
@@ -810,20 +817,24 @@ class SportX implements ISportX {
   }
 }
 
-export async function newSportX(
-  env: Environments,
-  customSidechainProviderUrl?: string,
-  privateKey?: string,
-  sidechainProvider?: Web3Provider,
-  apiUrl?: string
-) {
+export async function newSportX(sportXObj: ISportXArgs) {
+  const {
+    env,
+    customSidechainProviderUrl,
+    privateKey,
+    sidechainProvider,
+    apiUrl,
+    apiKey,
+  } = sportXObj;
   const sportX = new SportX(
     env,
     customSidechainProviderUrl,
     privateKey,
     sidechainProvider,
-    apiUrl
+    apiUrl,
+    apiKey
   );
   await sportX.init();
   return sportX;
 }
+

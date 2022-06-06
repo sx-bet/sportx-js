@@ -45,16 +45,15 @@ describe("sportx", () => {
   const wallet = Wallet.fromMnemonic(TEST_MNEMONIC).connect(provider);
 
   before("should initialize", async () => {
-    sportX = await newSportX(
+    sportX = await newSportX({
       env,
-      process.env.SIDECHAIN_PROVIDER_URL,
-      wallet.privateKey,
-      undefined,
-      process.env.API_URL
-    );
+      customSidechainProviderUrl: process.env.SIDE_CHAIN_PROVIDER_URL,
+      privateKey: wallet.privateKey,
+      apiUrl: process.env.API_URL,
+      apiKey: "7f098584-5e7d-4e88-b585-109a55358625",
+    });
     await sportX.approveSportXContracts(
       TOKEN_ADDRESSES[getNetwork(env)][Tokens.SPORTX],
-      // TEST_MNEMONIC
     );
   });
 
