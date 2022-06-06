@@ -22,7 +22,7 @@ import { getNetwork } from "../src/utils/networks";
 // tslint:disable no-string-literal
 const TEST_MNEMONIC =
   process.env.TEST_MNEMONIC ||
-  // "elegant execute say gain evil afford puppy upon amateur planet lunar pen";
+  "elegant execute say gain evil afford puppy upon amateur planet lunar pen";
 
 if (!process.env.ENVIRONMENT) {
   throw new Error(`ENVIRONMENT env var not defined`);
