@@ -780,7 +780,7 @@ Which produces unsettled trades like so:
 Before you are able to fill orders or submit new orders, you need to approve the SportX contracts for trading. You can do this by simply calling:
 
 ```typescript
-const approvalTxn = await sportX.approveSportXContracts(tokenAddress, mnemonic);
+const approvalTxn = await sportX.approveSportXContracts(tokenAddress);
 console.log(approvalTxn);
 ```
 

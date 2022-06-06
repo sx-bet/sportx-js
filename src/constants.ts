@@ -40,7 +40,7 @@ export const RELAYER_URLS = {
   [Environments.SxToronto]: "https://api.toronto.sx.bet",
 };
 
-export const DEFAULT_RPL_URLS = {
+export const DEFAULT_RPC_URLS = {
   [Environments.MUMBAI]: "https://rpc-mumbai.matic.today",
   [Environments.PRODUCTION]: "https://polygon-rpc.com/",
   [Environments.SxToronto]: "https://rpc.toronto.sx.technology",

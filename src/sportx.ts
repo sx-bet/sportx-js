@@ -15,7 +15,7 @@ import ChildERC20 from "./artifacts/ChildERC20.json";
 import ChildToken from "./artifacts/ChildToken.json";
 import {
   CHAIN_IDS,
-  DEFAULT_RPL_URLS,
+  DEFAULT_RPC_URLS,
   EIP712_FILL_HASHER_ADDRESSES,
   EIP712_VERSION,
   Environments,
@@ -152,7 +152,7 @@ class SportX implements ISportX {
     this.network = getNetwork(this.environment);
 
     let providerUrl;
-    providerUrl = DEFAULT_RPL_URLS[env];
+    providerUrl = DEFAULT_RPC_URLS[env];
 
     if (customProviderUrl) {
       providerUrl = customProviderUrl;

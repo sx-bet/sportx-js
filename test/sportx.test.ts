@@ -4,7 +4,7 @@ import { expect } from "chai";
 import "mocha";
 import { INewOrder, IPendingBetsRequest } from "../src";
 import {
-  DEFAULT_RPL_URLS,
+  DEFAULT_RPC_URLS,
   Environments,
   TOKEN_ADDRESSES,
   Tokens,
@@ -23,7 +23,6 @@ import { getNetwork } from "../src/utils/networks";
 const TEST_MNEMONIC =
   process.env.TEST_MNEMONIC ||
   // "elegant execute say gain evil afford puppy upon amateur planet lunar pen";
-  "course insect veteran exchange speed goddess drop turn narrow nut enhance agree riot believe release";
 
 if (!process.env.ENVIRONMENT) {
   throw new Error(`ENVIRONMENT env var not defined`);
@@ -39,7 +38,7 @@ describe("sportx", () => {
   let sportX: ISportX;
   const env: Environments = process.env.ENVIRONMENT as Environments;
   const provider = new StaticJsonRpcProvider(
-    DEFAULT_RPL_URLS[env],
+    DEFAULT_RPC_URLS[env],
     CHAIN_IDS[Networks.SX_TORONTO]
   );
   const wallet = Wallet.fromMnemonic(TEST_MNEMONIC).connect(provider);
@@ -50,7 +49,7 @@ describe("sportx", () => {
       customSidechainProviderUrl: process.env.SIDE_CHAIN_PROVIDER_URL,
       privateKey: wallet.privateKey,
       apiUrl: process.env.API_URL,
-      apiKey: "7f098584-5e7d-4e88-b585-109a55358625",
+      apiKey: process.env.API_KEY,
     });
     await sportX.approveSportXContracts(
       TOKEN_ADDRESSES[getNetwork(env)][Tokens.SPORTX],
