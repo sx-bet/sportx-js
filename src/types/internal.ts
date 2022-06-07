@@ -1,5 +1,7 @@
 import { BigNumber } from "@ethersproject/bignumber";
 import { Contract } from "@ethersproject/contracts";
+import { Web3Provider } from "@ethersproject/providers";
+import { Environments } from "../constants";
 
 export interface IContractOrder {
   marketHash: string;
@@ -57,4 +59,13 @@ export interface ICancelDetails {
 
 export interface IBaseTokenWrappers {
   [address: string]: Contract;
+}
+
+export interface ISportXArgs {
+  env: Environments,
+  customSidechainProviderUrl?: string,
+  privateKey?: string,
+  sidechainProvider?: Web3Provider,
+  apiUrl?: string,
+  apiKey?: string
 }

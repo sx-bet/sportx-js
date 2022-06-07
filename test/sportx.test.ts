@@ -1,13 +1,15 @@
-import { JsonRpcProvider } from "@ethersproject/providers";
+import { JsonRpcProvider, StaticJsonRpcProvider } from "@ethersproject/providers";
 import { Wallet } from "@ethersproject/wallet";
 import { expect } from "chai";
 import "mocha";
 import { INewOrder, IPendingBetsRequest } from "../src";
 import {
-  DEFAULT_MATIC_RPL_URLS,
+  DEFAULT_RPC_URLS,
   Environments,
   TOKEN_ADDRESSES,
   Tokens,
+  CHAIN_IDS,
+  Networks,
 } from "../src/constants";
 import { ISportX, newSportX } from "../src/sportx";
 import {
@@ -15,10 +17,9 @@ import {
   convertToAPIPercentageOdds,
   convertToTrueTokenAmount,
 } from "../src/utils/convert";
-import { getSidechainNetwork } from "../src/utils/networks";
+import { getNetwork } from "../src/utils/networks";
 
 // tslint:disable no-string-literal
-
 const TEST_MNEMONIC =
   process.env.TEST_MNEMONIC ||
   "elegant execute say gain evil afford puppy upon amateur planet lunar pen";
@@ -29,26 +30,29 @@ if (!process.env.ENVIRONMENT) {
 
 const testMarketHash =
   process.env.MARKET_HASH ||
-  "0x6dad8a2e7d9ca9a2a097deea2efeaec67f82f8ec53222ae9c83312f7a284e9b6"; // CHANGE THIS TO MATCH A REAL MARKET
+  "0x994c4b801a886ddab9e6c42abba515539f55c852595108f06979cdf67bac3475"; // CHANGE THIS TO MATCH A REAL MARKET
 
 const testSportXeventId = process.env.SPORTX_EVENT_ID || "L8137640";
 
 describe("sportx", () => {
   let sportX: ISportX;
   const env: Environments = process.env.ENVIRONMENT as Environments;
-  const provider = new JsonRpcProvider(DEFAULT_MATIC_RPL_URLS[env]);
+  const provider = new StaticJsonRpcProvider(
+    DEFAULT_RPC_URLS[env],
+    CHAIN_IDS[Networks.SX_TORONTO]
+  );
   const wallet = Wallet.fromMnemonic(TEST_MNEMONIC).connect(provider);
 
   before("should initialize", async () => {
-    sportX = await newSportX(
+    sportX = await newSportX({
       env,
-      process.env.SIDECHAIN_PROVIDER_URL,
-      wallet.privateKey,
-      undefined,
-      process.env.API_URL
-    );
+      customSidechainProviderUrl: process.env.SIDE_CHAIN_PROVIDER_URL,
+      privateKey: wallet.privateKey,
+      apiUrl: process.env.API_URL,
+      apiKey: process.env.API_KEY,
+    });
     await sportX.approveSportXContracts(
-      TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
+      TOKEN_ADDRESSES[getNetwork(env)][Tokens.SPORTX],
     );
   });
 
@@ -104,33 +108,33 @@ describe("sportx", () => {
     const newOrder: INewOrder = {
       marketHash: testMarketHash,
       totalBetSize: convertToTrueTokenAmount(
-        10,
-        TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
+        50,
+        TOKEN_ADDRESSES[getNetwork(env)][Tokens.SPORTX]
       ).toString(),
       percentageOdds: convertToAPIPercentageOdds(0.5).toString(),
       expiry: Math.floor((Date.now() + 3600 * 1000) / 1000),
       isMakerBettingOutcomeOne: true,
-      baseToken: TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI],
+      baseToken: TOKEN_ADDRESSES[getNetwork(env)][Tokens.SPORTX],
     };
     const secondNewOrder: INewOrder = {
       marketHash: testMarketHash,
       totalBetSize: convertToTrueTokenAmount(
-        10,
-        TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
+        50,
+        TOKEN_ADDRESSES[getNetwork(env)][Tokens.SPORTX]
       ).toString(),
       percentageOdds: convertToAPIPercentageOdds(0.5).toString(),
       expiry: Math.floor((Date.now() + 3600 * 1000) / 1000),
       isMakerBettingOutcomeOne: true,
-      baseToken: TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI],
+      baseToken: TOKEN_ADDRESSES[getNetwork(env)][Tokens.SPORTX],
     };
     const response = await sportX.newOrder([newOrder, secondNewOrder]);
     expect(response.status).to.equal("success");
   });
 
-  it("should cancel orders by event", async () => {
-    const response = await sportX.cancelOrdersByEvent(testSportXeventId);
-    expect(response.status).to.equal("success");
-  });
+it("should cancel orders by event", async () => {
+  const response = await sportX.cancelOrdersByEvent(testSportXeventId);
+  expect(response.status).to.equal("success");
+});
 
   it("should cancel all orders", async () => {
     const response = await sportX.cancelAllOrders();
@@ -141,13 +145,13 @@ describe("sportx", () => {
     const newOrder: INewOrder = {
       marketHash: testMarketHash,
       totalBetSize: convertToTrueTokenAmount(
-        10,
-        TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
+      400,
+        TOKEN_ADDRESSES[getNetwork(env)][Tokens.SPORTX]
       ).toString(),
       percentageOdds: convertToAPIPercentageOdds(0.5).toString(),
       expiry: Math.floor((Date.now() + 3600 * 1000) / 1000),
       isMakerBettingOutcomeOne: true,
-      baseToken: TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI],
+      baseToken: TOKEN_ADDRESSES[getNetwork(env)][Tokens.SPORTX],
     };
     const {
       data: { orders },
@@ -190,7 +194,7 @@ describe("sportx", () => {
     const orders = await sportX.getOrders(
       [testMarketHash],
       undefined,
-      TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
+      TOKEN_ADDRESSES[getNetwork(env)][Tokens.SPORTX]
     );
     const oneSidedOrders = orders.filter(
       (order) => order.isMakerBettingOutcomeOne
@@ -199,8 +203,8 @@ describe("sportx", () => {
       oneSidedOrders,
       oneSidedOrders.map((o) =>
         convertToTrueTokenAmount(
-          10,
-          TOKEN_ADDRESSES[getSidechainNetwork(env)][Tokens.DAI]
+          30,
+          TOKEN_ADDRESSES[getNetwork(env)][Tokens.SPORTX]
         )
       )
     );

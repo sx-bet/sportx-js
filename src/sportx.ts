@@ -3,7 +3,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { isHexString } from "@ethersproject/bytes";
 import { AddressZero, MaxUint256 } from "@ethersproject/constants";
 import { Contract } from "@ethersproject/contracts";
-import { JsonRpcProvider, Web3Provider } from "@ethersproject/providers";
+import { JsonRpcProvider, StaticJsonRpcProvider, Web3Provider } from "@ethersproject/providers";
 import { randomBytes } from "@ethersproject/random";
 import { Wallet } from "@ethersproject/wallet";
 import * as ably from "ably";
@@ -12,16 +12,19 @@ import debug from "debug";
 import ethSigUtil from "eth-sig-util";
 import queryString from "query-string";
 import ChildERC20 from "./artifacts/ChildERC20.json";
+import ChildToken from "./artifacts/ChildToken.json";
 import {
   CHAIN_IDS,
-  DEFAULT_MATIC_RPL_URLS,
+  DEFAULT_RPC_URLS,
   EIP712_FILL_HASHER_ADDRESSES,
   EIP712_VERSION,
   Environments,
+  Networks,
   RELAYER_HTTP_ENDPOINTS,
   RELAYER_TIMEOUT,
   RELAYER_URLS,
   SidechainNetworks,
+  Tokens,
   TOKEN_ADDRESSES,
   TOKEN_TRANSFER_PROXY_ADDRESS,
 } from "./constants";
@@ -32,6 +35,7 @@ import {
   IBaseTokenWrappers,
   IFillDetails,
   IFillDetailsMetadata,
+  ISportXArgs,
 } from "./types/internal";
 import {
   IActiveLeague,
@@ -57,7 +61,7 @@ import {
 } from "./types/relayer";
 import { convertToContractOrder } from "./utils/convert";
 import { tryParseJson } from "./utils/misc";
-import { getSidechainNetwork } from "./utils/networks";
+import { getNetwork } from "./utils/networks";
 import {
   getCancelAllOrdersEIP712Payload,
   getCancelOrderEIP712Payload,
@@ -112,16 +116,16 @@ export interface ISportX {
     approveProxyPayload?: IApproveSpenderPayload
   ): Promise<IRelayerResponse>;
   getTrades(tradeRequest: IGetTradesRequest): Promise<ITradesResponse>;
-  approveSportXContracts(token: string): Promise<IRelayerResponse>;
+  approveSportXContracts(token: string): Promise<any>;
   getRealtimeConnection(): ably.Types.RealtimePromise;
   getEip712Signature(payload: any): Promise<string>;
   getLiveScores(eventIds: string[]): Promise<ILiveScore[]>;
 }
 
 class SportX implements ISportX {
-  private sidechainSigningWallet: Signer;
+  private signingWallet: Signer;
   private relayerUrl: string;
-  private sidechainProvider: JsonRpcProvider;
+  private provider: JsonRpcProvider;
   private initialized: boolean = false;
   private debug = debug("sportx-js");
   private metadata!: IMetadata;
@@ -129,40 +133,52 @@ class SportX implements ISportX {
   private environment: Environments;
   private privateKey!: string;
   private sidechainChainId!: number;
-  private sidechainNetwork: SidechainNetworks;
+  private network: SidechainNetworks | Networks;
   private baseTokenWrappers: IBaseTokenWrappers = {};
+  private apiKey: string;
 
   constructor(
     env: Environments,
-    customSidechainProviderUrl?: string,
+    customProviderUrl?: string,
     privateKey?: string,
-    sidechainProvider?: Web3Provider,
-    apiUrl?: string
+    customProvider?: Web3Provider,
+    apiUrl?: string,
+    apiKey?: string
   ) {
-    let sidechainProviderUrl = DEFAULT_MATIC_RPL_URLS[env];
-    if (customSidechainProviderUrl) {
-      sidechainProviderUrl = customSidechainProviderUrl;
-    }
-    if (privateKey && !isHexString(privateKey)) {
-      throw new Error(`${privateKey} is not a valid private key.`);
-    } else if (privateKey) {
-      this.sidechainProvider = new JsonRpcProvider(sidechainProviderUrl);
-      this.sidechainSigningWallet = new Wallet(privateKey).connect(
-        this.sidechainProvider
-      );
-      this.privateKey = privateKey;
-    } else if (sidechainProvider) {
-      this.sidechainSigningWallet = sidechainProvider.getSigner(0);
-      this.sidechainProvider = sidechainProvider;
-    } else {
-      throw new Error(`Neither privateKey nor both providers provided.`);
-    }
     if (!Object.values(Environments).includes(env)) {
       throw new Error(`Invalid environment: ${env}`);
     }
     this.environment = env;
+    this.network = getNetwork(this.environment);
+
+    let providerUrl;
+    providerUrl = DEFAULT_RPC_URLS[env];
+
+    if (customProviderUrl) {
+      providerUrl = customProviderUrl;
+    }
+
+    if (privateKey && !isHexString(privateKey)) {
+      throw new Error(`${privateKey} is not a valid private key.`);
+    } else if (privateKey) {
+      this.provider = new StaticJsonRpcProvider(
+        providerUrl,
+        CHAIN_IDS[this.network],
+      )
+      this.signingWallet = new Wallet(privateKey).connect(
+        this.provider
+      );
+      this.privateKey = privateKey;
+    } else if (customProvider) {
+      this.signingWallet = customProvider.getSigner(0);
+      this.provider = customProvider;
+    } else {
+      throw new Error(`Neither privateKey nor both providers provided.`);
+    }
+
+    this.apiKey = apiKey || "";
+
     this.relayerUrl = apiUrl || RELAYER_URLS[env];
-    this.sidechainNetwork = getSidechainNetwork(this.environment);
   }
 
   public async cancelOrder(orderHashes: string[]): Promise<IRelayerResponse> {
@@ -188,7 +204,7 @@ class SportX implements ISportX {
       signature,
       orderHashes,
       salt,
-      maker: await this.sidechainSigningWallet.getAddress(),
+      maker: await this.signingWallet.getAddress(),
       timestamp,
     };
     this.debug("Cancel order payload");
@@ -198,7 +214,10 @@ class SportX implements ISportX {
       {
         method: "POST",
         body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Api-Key": this.apiKey,
+        },
       }
     );
     const result = await this.tryParseResponse(
@@ -225,7 +244,7 @@ class SportX implements ISportX {
     const payload: ICancelAllOrdersRequest = {
       signature,
       salt,
-      maker: await this.sidechainSigningWallet.getAddress(),
+      maker: await this.signingWallet.getAddress(),
       timestamp,
     };
     this.debug("Cancel all orders payload");
@@ -235,7 +254,10 @@ class SportX implements ISportX {
       {
         method: "POST",
         body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Api-Key": this.apiKey,
+        },
       }
     );
     const result = await this.tryParseResponse(
@@ -269,7 +291,7 @@ class SportX implements ISportX {
       signature,
       sportXeventId,
       salt,
-      maker: await this.sidechainSigningWallet.getAddress(),
+      maker: await this.signingWallet.getAddress(),
       timestamp,
     };
     this.debug("Cancel order event payload");
@@ -279,7 +301,10 @@ class SportX implements ISportX {
       {
         method: "POST",
         body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Api-Key": this.apiKey,
+        },
       }
     );
     const result = await this.tryParseResponse(
@@ -323,15 +348,15 @@ class SportX implements ISportX {
       setTimeout(() => reject(), RELAYER_TIMEOUT);
     });
     this.metadata = await this.getMetadata();
-    const sidechainNetwork = await this.sidechainProvider.getNetwork();
+    const sidechainNetwork = await this.provider.getNetwork();
     this.sidechainChainId = sidechainNetwork.chainId;
     this.verifyChainIds();
-    Object.entries(TOKEN_ADDRESSES[this.sidechainNetwork]).map(
+    Object.entries(TOKEN_ADDRESSES[this.network]).map(
       async ([, address]) => {
         this.baseTokenWrappers[address] = new Contract(
           address,
-          ChildERC20.abi,
-          this.sidechainProvider
+          ChildERC20.abi, 
+          this.provider
         );
       }
     );
@@ -401,7 +426,10 @@ class SportX implements ISportX {
       {
         method: "POST",
         body: JSON.stringify({ sportXEventIds: eventIds }),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Api-Key": this.apiKey,
+        },
       }
     );
     const result = await this.tryParseResponse(
@@ -459,7 +487,10 @@ class SportX implements ISportX {
       {
         method: "POST",
         body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Api-Key": this.apiKey,
+        },
       }
     );
     const result = await this.tryParseResponse(
@@ -480,7 +511,7 @@ class SportX implements ISportX {
         throw new APISchemaError(val);
       }
     });
-    const walletAddress = await this.sidechainSigningWallet.getAddress();
+    const walletAddress = await this.signingWallet.getAddress();
     const apiOrders = await Promise.all(
       orders.map(async (order) => {
         const bigNumBetSize = BigNumber.from(order.totalBetSize);
@@ -499,7 +530,7 @@ class SportX implements ISportX {
         };
         const signature = await getOrderSignature(
           apiMakerOrder,
-          this.sidechainSigningWallet
+          this.signingWallet
         );
         const signedApiMakerOrder: ISignedRelayerMakerOrder = {
           ...apiMakerOrder,
@@ -516,7 +547,10 @@ class SportX implements ISportX {
       {
         method: "POST",
         body: JSON.stringify({ orders: apiOrders }),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Api-Key": this.apiKey,
+        },
       }
     );
     const result = await this.tryParseResponse(
@@ -594,7 +628,7 @@ class SportX implements ISportX {
     const payload: IRelayerMetaFillOrderRequest = {
       orderHashes,
       takerAmounts,
-      taker: await this.sidechainSigningWallet.getAddress(),
+      taker: await this.signingWallet.getAddress(),
       takerSig: takerSignature,
       fillSalt: fillSalt.toString(),
       ...finalFillDetailsMetadata,
@@ -612,7 +646,10 @@ class SportX implements ISportX {
       {
         method: "POST",
         body: JSON.stringify(payload),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Api-Key": this.apiKey,
+        },
       }
     );
     const result = await this.tryParseResponse(response, "Can't fill orders.");
@@ -636,6 +673,7 @@ class SportX implements ISportX {
         body: JSON.stringify(request),
         headers: {
           "Content-Type": "application/json",
+          "X-Api-Key": this.apiKey,
         },
       }
     );
@@ -665,7 +703,10 @@ class SportX implements ISportX {
       {
         method: "POST",
         body: JSON.stringify(tradeRequest),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Api-Key": this.apiKey,
+        },
       }
     );
     const result = await this.tryParseResponse(response, "Can't get trades");
@@ -704,6 +745,7 @@ class SportX implements ISportX {
         body: JSON.stringify(payload),
         headers: {
           "Content-Type": "application/json",
+          "X-Api-Key": this.apiKey,
         },
       }
     );
@@ -716,47 +758,18 @@ class SportX implements ISportX {
   }
 
   public async approveSportXContracts(token: string) {
-    const walletAddress = await this.sidechainSigningWallet.getAddress();
-    const tokenContract = this.baseTokenWrappers[token];
-    const nonce: BigNumber = await tokenContract.getNonce(walletAddress);
-    const tokenName: string = await tokenContract.name();
-    const abiEncodedFunctionSig = tokenContract.interface.encodeFunctionData(
-      "approve",
-      [TOKEN_TRANSFER_PROXY_ADDRESS[this.environment], MaxUint256]
-    );
-    const signingPayload = getMaticEip712Payload(
-      abiEncodedFunctionSig,
-      nonce.toNumber(),
-      walletAddress,
-      this.sidechainChainId,
+    const tokenContract = new Contract(
       token,
-      tokenName
+      ChildToken.abi, 
+      this.signingWallet
+    )
+    const approvalTxn = await tokenContract.approve(
+      TOKEN_TRANSFER_PROXY_ADDRESS[this.environment],
+      MaxUint256,
     );
-    const signature = await this.getEip712Signature(signingPayload);
-    const payload: IApproveSpenderPayload = {
-      owner: walletAddress,
-      spender: TOKEN_TRANSFER_PROXY_ADDRESS[this.environment],
-      tokenAddress: token,
-      amount: MaxUint256.toString(),
-      signature,
-    };
-    const response = await fetch(
-      `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.DAI_APPROVAL}`,
-      {
-        method: "POST",
-        body: JSON.stringify(payload),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    const result = await this.tryParseResponse(
-      response,
-      "Can't approve SportX contracts"
-    );
-    this.debug("Relayer response");
-    this.debug(result);
-    return result as IRelayerResponse;
+    this.debug("Approval Txn response");
+    this.debug(approvalTxn);
+    return approvalTxn;
   }
 
   public async getEip712Signature(payload: any) {
@@ -768,17 +781,17 @@ class SportX implements ISportX {
       );
       return signature;
     } else if (
-      (this.sidechainProvider as any)._web3Provider.isMetaMask === true
+      (this.provider as any)._web3Provider.isMetaMask === true
     ) {
-      const walletAddress = await this.sidechainSigningWallet.getAddress();
-      const signature: string = await this.sidechainProvider.send(
+      const walletAddress = await this.signingWallet.getAddress();
+      const signature: string = await this.provider.send(
         "eth_signTypedData_v4",
         [walletAddress, JSON.stringify(payload)]
       );
       return signature;
     } else {
-      const walletAddress = await this.sidechainSigningWallet.getAddress();
-      const signature: string = await this.sidechainProvider.send(
+      const walletAddress = await this.signingWallet.getAddress();
+      const signature: string = await this.provider.send(
         "eth_signTypedData",
         [walletAddress, payload]
       );
@@ -817,24 +830,34 @@ class SportX implements ISportX {
           `Incorrect sidechain chain ID for mumbai environment. Are you sure the passed sidechain provider is pointing to Mumbai?`
         );
       }
+    } else if (this.environment === Environments.SxToronto) {
+      if (this.sidechainChainId !== CHAIN_IDS[Networks.SX_TORONTO]) {
+        throw new Error(
+          `Incorrect sidechain chain ID for sx_toronto environment. Are you sure the passed sidechain provider is pointing to Toronto?`
+        );
+      }
     }
   }
 }
 
-export async function newSportX(
-  env: Environments,
-  customSidechainProviderUrl?: string,
-  privateKey?: string,
-  sidechainProvider?: Web3Provider,
-  apiUrl?: string
-) {
+export async function newSportX(sportXObj: ISportXArgs) {
+  const {
+    env,
+    customSidechainProviderUrl,
+    privateKey,
+    sidechainProvider,
+    apiUrl,
+    apiKey,
+  } = sportXObj;
   const sportX = new SportX(
     env,
     customSidechainProviderUrl,
     privateKey,
     sidechainProvider,
-    apiUrl
+    apiUrl,
+    apiKey
   );
   await sportX.init();
   return sportX;
 }
+

@@ -60,6 +60,15 @@ async function main() {
     process.env.ETHEREUM_PRIVATE_KEY,
     process.env.GOERLI_PROVIDER_URL
   )
+
+  // or 
+
+  const sportXToronto = await newSportX(
+    Environments.SxToronto,
+    process.env.ETHEREUM_PRIVATE_KEY,
+    process.env.SX_TORONTO_PROVIDER_URL
+  )
+
 }
 ```
 
@@ -771,8 +780,8 @@ Which produces unsettled trades like so:
 Before you are able to fill orders or submit new orders, you need to approve the SportX contracts for trading. You can do this by simply calling:
 
 ```typescript
-const result = await sportX.approveSportXContracts(tokenAddress);
-console.log(result);
+const approvalTxn = await sportX.approveSportXContracts(tokenAddress);
+console.log(approvalTxn);
 ```
 
 where `tokenAddress` is the address of the token you wish to bet in. 
