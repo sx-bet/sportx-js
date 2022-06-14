@@ -354,7 +354,7 @@ const newOrder = {
   isMakerBettingOutcomeOne: true
   baseToken: "0x44495672C86eEeE14adA9a3e453EEd68a338cdC1"
 };
-const response = await sportX.newOrder(newOrder);
+const response = await sportX.newOrder([newOrder]);
 console.log(response);
 ```
 
