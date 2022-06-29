@@ -767,9 +767,12 @@ class SportX implements ISportX {
       TOKEN_TRANSFER_PROXY_ADDRESS[this.environment],
       MaxUint256,
     );
-    this.debug("Approval Txn response");
-    this.debug(approvalTxn);
-    return approvalTxn;
+    
+    const receipt = await approvalTxn.wait();
+
+    this.debug("Approval Txn reciept");
+    this.debug(receipt);
+    return receipt;
   }
 
   public async getEip712Signature(payload: any) {

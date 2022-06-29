@@ -49,8 +49,9 @@ export const DEFAULT_RPC_URLS = {
 export const TOKEN_TRANSFER_PROXY_ADDRESS = {
   [Environments.MUMBAI]: "0xa6Fd088CCce831E562ef7B580a7c50BD7aE2B761",
   [Environments.PRODUCTION]: "0x3d8A563962dFeE81D7780Ed2BF0257ab88df857D",
-  [Environments.SxToronto]: "0x559FD42454a6DBBDE66C4EDFf5925b0556Fc233E",
+  [Environments.SxToronto]: "0x6681293989e06a4E7c7e18c13C1AE13925BdfdB7",
 };
+
 
 export const EIP712_VERSION = {
   [Environments.MUMBAI]: "3.0",
