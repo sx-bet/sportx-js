@@ -19,6 +19,8 @@ export function getNetwork(environment: Environments) {
       return SidechainNetworks.MAIN_MATIC;
     case Environments.SxToronto:
       return Networks.SX_TORONTO;
+    case Environments.SxStage:
+      return Networks.SX_MAINNET;
     default:
       throw new Error(`Unkown environment ${environment}`);
   }
