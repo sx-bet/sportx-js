@@ -41,26 +41,17 @@ In any case, to get started, you can either initialize via your ethereum private
 
 ### Initializing via ethereum private key
 
-For this you will need a URL of an Ethereum provider to connect to the network along with your Ethereum private key. You can get a dedicated URL at https://infura.io. Note that the provider URL should connect to the mainchain and not the polygon chain. So if the environment is "MUMBAI", the provider URL should point to goerli. If the environment is "PRODUCTION", the provider URL should point to ETH mainnet. 
+For this you will need a URL of an Ethereum provider to connect to the network along with your Ethereum private key. For the provider url you can connect to https://rpc.sx.technology for SxStage & SxMainnet environment. For toronto, use this provider url https://rpc.sx.technology instead. This will get you connected to the SX chain. Make sure you pass in the correct urls for with the righ environments.
 
 ```typescript
 import { Environments, newSportX } from "@sportx-bet/sportx-js";
 
 async function main() {
   const sportX = await newSportX(
-    Environments.PRODUCTION,
+    Environments.SxMainnet,
     process.env.ETHEREUM_PRIVATE_KEY,
-    process.env.ETH_MAINNET_PROVIDER_URL
+    process.env.PROVIDER_URL
   );
-
-  // or
-
-  const sportXmumbai = await newSportX(
-    Environments.MUMBAI,
-    process.env.ETHEREUM_PRIVATE_KEY,
-    process.env.GOERLI_PROVIDER_URL
-  )
-
   // or 
 
   const sportXToronto = await newSportX(
@@ -82,7 +73,7 @@ import { providers } from "ethers";
 
 async function main() {
   const sportX = await newSportX(
-    Environments.MUMBAI,
+    Environments.SxToronto,
     undefined,
     undefined,
     new providers.Web3Provider(web3.currentProvider)
