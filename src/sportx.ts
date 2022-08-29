@@ -821,7 +821,7 @@ class SportX implements ISportX {
   }
 
   private verifyChainIds() {
-    if (this.environment === Environments.PRODUCTION) {
+    if (this.environment === Environments.SxMainnet) {
       if (this.sidechainChainId !== CHAIN_IDS[SidechainNetworks.MAIN_MATIC]) {
         throw new Error(
           `Incorrect sidechain chain ID for production environment. Are you sure the passed sidechain provider is pointing to Polygon mainnet?`
@@ -864,3 +864,15 @@ export async function newSportX(sportXObj: ISportXArgs) {
   return sportX;
 }
 
+export function getValidEnv(env: string): Environments {
+  switch (env) {
+    case Environments.SxMainnet:
+      return Environments.SxMainnet;
+    case Environments.SxStage:
+      return Environments.SxStage;
+    case Environments.SxToronto:
+      return Environments.SxToronto;
+    default:
+      throw new Error(`Unknown environment ${env}`);
+  }
+}
