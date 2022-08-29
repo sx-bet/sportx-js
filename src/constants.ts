@@ -26,7 +26,7 @@ export enum Environments {
   MUMBAI = "mumbai",
   SxToronto = "sx_toronto",
   SxStage = "stage",
-  PRODUCTION = "production",
+  SxMainnet = "production",
 }
 
 export enum Tokens {
@@ -38,21 +38,22 @@ export enum Tokens {
 
 export const RELAYER_URLS = {
   [Environments.MUMBAI]: "https://mumbai.api.sportx.bet",
-  [Environments.PRODUCTION]: "https://app.api.sportx.bet",
+  [Environments.SxMainnet]: "https://app.api.sportx.bet",
   [Environments.SxToronto]: "https://api.toronto.sx.bet",
   [Environments.SxStage]: "https://api.stage.sx.bet",
+  [Environments.SxMainnet]: "https://api.prod.sx.bet",
 };
 
 export const DEFAULT_RPC_URLS = {
   [Environments.MUMBAI]: "https://rpc-mumbai.matic.today",
-  [Environments.PRODUCTION]: "https://polygon-rpc.com/",
+  [Environments.SxMainnet]: "https://rpc.sx.technology",
   [Environments.SxToronto]: "https://rpc.toronto.sx.technology",
   [Environments.SxStage]: "https://rpc.sx.technology",
 };
 
 export const TOKEN_TRANSFER_PROXY_ADDRESS = {
   [Environments.MUMBAI]: "0xa6Fd088CCce831E562ef7B580a7c50BD7aE2B761",
-  [Environments.PRODUCTION]: "0x3d8A563962dFeE81D7780Ed2BF0257ab88df857D",
+  [Environments.SxMainnet]: "0xCc4fBba7D0E0F2A03113F42f5D3aE80d9B2aD55d",
   [Environments.SxToronto]: "0x6681293989e06a4E7c7e18c13C1AE13925BdfdB7",
   [Environments.SxStage]: "0xA82Aec37d413dBF27bc4A6b830C14C145ffF9279",
 };
@@ -60,7 +61,7 @@ export const TOKEN_TRANSFER_PROXY_ADDRESS = {
 
 export const EIP712_VERSION = {
   [Environments.MUMBAI]: "3.0",
-  [Environments.PRODUCTION]: "3.0",
+  [Environments.SxMainnet]: "4.0",
   [Environments.SxToronto]: "4.0",
   [Environments.SxStage]: "4.0",
 };
@@ -119,13 +120,13 @@ export const TOKEN_ADDRESSES: INestedStringObj = {
 
 export const FILL_ORDER_ADDRESS = {
   [Environments.MUMBAI]: "0x4Cd6F9b67b9c5616A526d5251d9CEF1BF97E99bB",
-  [Environments.PRODUCTION]: "0xF3440625e1751208350384d11C5AC89ed2b6eEb2",
+  [Environments.SxMainnet]: "0xF3440625e1751208350384d11C5AC89ed2b6eEb2",
   [Environments.SxStage]: "0xDE9C81f453a31832925E5E9D0a2C86E5786eaaca",
 };
 
 export const EIP712_FILL_HASHER_ADDRESSES = {
   [Environments.MUMBAI]: "0x9B830735E38b96FA0d9e934E3cC901bfa4A9C508",
-  [Environments.PRODUCTION]: "0xCD667A4E7E377388b3aD8d57C3AEc4aC914c84Eb",
+  [Environments.SxMainnet]: "0x3E96B0a25d51e3Cc89C557f152797c33B839968f",
   [Environments.SxToronto]: "0xd29EA8FB542BcA706c374b008f87344062a530e9",
   [Environments.SxStage]: "0xb2d7C177FFF04E2BE8CeFFa67955dEF19eac70e8"
 };
