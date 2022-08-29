@@ -19,12 +19,14 @@ export enum SidechainNetworks {
 
 export enum Networks {
   SX_TORONTO = "sx-toronto",
+  SX_MAINNET = "sx-mainnet",
 }
 
 export enum Environments {
   MUMBAI = "mumbai",
   SxToronto = "sx_toronto",
-  PRODUCTION = "production",
+  SxStage = "stage",
+  SxMainnet = "production",
 }
 
 export enum Tokens {
@@ -36,27 +38,32 @@ export enum Tokens {
 
 export const RELAYER_URLS = {
   [Environments.MUMBAI]: "https://mumbai.api.sportx.bet",
-  [Environments.PRODUCTION]: "https://app.api.sportx.bet",
+  [Environments.SxMainnet]: "https://app.api.sportx.bet",
   [Environments.SxToronto]: "https://api.toronto.sx.bet",
+  [Environments.SxStage]: "https://api.stage.sx.bet",
+  [Environments.SxMainnet]: "https://api.prod.sx.bet",
 };
 
 export const DEFAULT_RPC_URLS = {
   [Environments.MUMBAI]: "https://rpc-mumbai.matic.today",
-  [Environments.PRODUCTION]: "https://polygon-rpc.com/",
+  [Environments.SxMainnet]: "https://rpc.sx.technology",
   [Environments.SxToronto]: "https://rpc.toronto.sx.technology",
+  [Environments.SxStage]: "https://rpc.sx.technology",
 };
 
 export const TOKEN_TRANSFER_PROXY_ADDRESS = {
   [Environments.MUMBAI]: "0xa6Fd088CCce831E562ef7B580a7c50BD7aE2B761",
-  [Environments.PRODUCTION]: "0x3d8A563962dFeE81D7780Ed2BF0257ab88df857D",
+  [Environments.SxMainnet]: "0xCc4fBba7D0E0F2A03113F42f5D3aE80d9B2aD55d",
   [Environments.SxToronto]: "0x6681293989e06a4E7c7e18c13C1AE13925BdfdB7",
+  [Environments.SxStage]: "0xA82Aec37d413dBF27bc4A6b830C14C145ffF9279",
 };
 
 
 export const EIP712_VERSION = {
   [Environments.MUMBAI]: "3.0",
-  [Environments.PRODUCTION]: "3.0",
+  [Environments.SxMainnet]: "4.0",
   [Environments.SxToronto]: "4.0",
+  [Environments.SxStage]: "4.0",
 };
 
 interface IStringObj {
@@ -73,6 +80,7 @@ export const CHAIN_IDS = {
   [SidechainNetworks.MAIN_MATIC]: 137,
   [SidechainNetworks.MUMBAI_MATIC]: 80001,
   [Networks.SX_TORONTO]: 647,
+  [Networks.SX_MAINNET]: 416,
 };
 
 export const TOKEN_ADDRESSES: INestedStringObj = {
@@ -103,17 +111,24 @@ export const TOKEN_ADDRESSES: INestedStringObj = {
     [Tokens.USDC]: "0x5147891461a7C81075950f8eE6384e019e39ab98",
     [Tokens.SPORTX]: "0x2D4e10Ee64CCF407C7F765B363348f7F62D2E06e",
   },
+  [Networks.SX_MAINNET]: {
+    [Tokens.WETH]: "0xA173954Cc4b1810C0dBdb007522ADbC182DaB380",
+    [Tokens.USDC]: "0xe2aa35C2039Bd0Ff196A6Ef99523CC0D3972ae3e",
+    [Tokens.SPORTX]: "0xaa99bE3356a11eE92c3f099BD7a038399633566f",
+  },
 };
 
 export const FILL_ORDER_ADDRESS = {
   [Environments.MUMBAI]: "0x4Cd6F9b67b9c5616A526d5251d9CEF1BF97E99bB",
-  [Environments.PRODUCTION]: "0xF3440625e1751208350384d11C5AC89ed2b6eEb2",
+  [Environments.SxMainnet]: "0xF3440625e1751208350384d11C5AC89ed2b6eEb2",
+  [Environments.SxStage]: "0xDE9C81f453a31832925E5E9D0a2C86E5786eaaca",
 };
 
 export const EIP712_FILL_HASHER_ADDRESSES = {
   [Environments.MUMBAI]: "0x9B830735E38b96FA0d9e934E3cC901bfa4A9C508",
-  [Environments.PRODUCTION]: "0xCD667A4E7E377388b3aD8d57C3AEc4aC914c84Eb",
-  [Environments.SxToronto]: "0xd29EA8FB542BcA706c374b008f87344062a530e9"
+  [Environments.SxMainnet]: "0x3E96B0a25d51e3Cc89C557f152797c33B839968f",
+  [Environments.SxToronto]: "0xd29EA8FB542BcA706c374b008f87344062a530e9",
+  [Environments.SxStage]: "0xb2d7C177FFF04E2BE8CeFFa67955dEF19eac70e8"
 };
 
 export const RELAYER_HTTP_ENDPOINTS = {
@@ -155,5 +170,8 @@ export const TokenDecimalMapping: { [address: string]: number } = {
   [TOKEN_ADDRESSES[PublicNetworks.MAIN][Tokens.USDC]]: 6,
   [TOKEN_ADDRESSES[Networks.SX_TORONTO][Tokens.WETH]]: 18,
   [TOKEN_ADDRESSES[Networks.SX_TORONTO][Tokens.SPORTX]]: 18,
-  [TOKEN_ADDRESSES[Networks.SX_TORONTO][Tokens.USDC]]: 6
+  [TOKEN_ADDRESSES[Networks.SX_TORONTO][Tokens.USDC]]: 6,
+  [TOKEN_ADDRESSES[Networks.SX_MAINNET][Tokens.WETH]]: 18,
+  [TOKEN_ADDRESSES[Networks.SX_MAINNET][Tokens.SPORTX]]: 18,
+  [TOKEN_ADDRESSES[Networks.SX_MAINNET][Tokens.USDC]]: 6
 };
