@@ -23,8 +23,6 @@ import {
   RELAYER_HTTP_ENDPOINTS,
   RELAYER_TIMEOUT,
   RELAYER_URLS,
-  SidechainNetworks,
-  Tokens,
   TOKEN_ADDRESSES,
   TOKEN_TRANSFER_PROXY_ADDRESS,
 } from "./constants";
@@ -67,7 +65,6 @@ import {
   getCancelOrderEIP712Payload,
   getCancelOrderEventsEIP712Payload,
   getFillOrderEIP712Payload,
-  getMaticEip712Payload,
   getOrderHash,
   getOrderSignature,
 } from "./utils/signing";
@@ -133,7 +130,7 @@ class SportX implements ISportX {
   private environment: Environments;
   private privateKey!: string;
   private sidechainChainId!: number;
-  private network: SidechainNetworks | Networks;
+  private network: Networks;
   private baseTokenWrappers: IBaseTokenWrappers = {};
   private apiKey: string;
 
@@ -163,11 +160,9 @@ class SportX implements ISportX {
     } else if (privateKey) {
       this.provider = new StaticJsonRpcProvider(
         providerUrl,
-        CHAIN_IDS[this.network],
-      )
-      this.signingWallet = new Wallet(privateKey).connect(
-        this.provider
+        CHAIN_IDS[this.network]
       );
+      this.signingWallet = new Wallet(privateKey).connect(this.provider);
       this.privateKey = privateKey;
     } else if (customProvider) {
       this.signingWallet = customProvider.getSigner(0);
@@ -351,15 +346,13 @@ class SportX implements ISportX {
     const sidechainNetwork = await this.provider.getNetwork();
     this.sidechainChainId = sidechainNetwork.chainId;
     this.verifyChainIds();
-    Object.entries(TOKEN_ADDRESSES[this.network]).map(
-      async ([, address]) => {
-        this.baseTokenWrappers[address] = new Contract(
-          address,
-          ChildERC20.abi, 
-          this.provider
-        );
-      }
-    );
+    Object.entries(TOKEN_ADDRESSES[this.network]).map(async ([, address]) => {
+      this.baseTokenWrappers[address] = new Contract(
+        address,
+        ChildERC20.abi,
+        this.provider
+      );
+    });
     this.initialized = true;
     this.debug("Initialized");
   }
@@ -760,14 +753,14 @@ class SportX implements ISportX {
   public async approveSportXContracts(token: string) {
     const tokenContract = new Contract(
       token,
-      ChildToken.abi, 
+      ChildToken.abi,
       this.signingWallet
-    )
+    );
     const approvalTxn = await tokenContract.approve(
       TOKEN_TRANSFER_PROXY_ADDRESS[this.environment],
-      MaxUint256,
+      MaxUint256
     );
-    
+
     const receipt = await approvalTxn.wait();
 
     this.debug("Approval Txn reciept");
@@ -783,9 +776,7 @@ class SportX implements ISportX {
         { data: payload }
       );
       return signature;
-    } else if (
-      (this.provider as any)._web3Provider.isMetaMask === true
-    ) {
+    } else if ((this.provider as any)._web3Provider.isMetaMask === true) {
       const walletAddress = await this.signingWallet.getAddress();
       const signature: string = await this.provider.send(
         "eth_signTypedData_v4",
@@ -794,10 +785,10 @@ class SportX implements ISportX {
       return signature;
     } else {
       const walletAddress = await this.signingWallet.getAddress();
-      const signature: string = await this.provider.send(
-        "eth_signTypedData",
-        [walletAddress, payload]
-      );
+      const signature: string = await this.provider.send("eth_signTypedData", [
+        walletAddress,
+        payload,
+      ]);
       return signature;
     }
   }
@@ -822,15 +813,9 @@ class SportX implements ISportX {
 
   private verifyChainIds() {
     if (this.environment === Environments.SxMainnet) {
-      if (this.sidechainChainId !== CHAIN_IDS[SidechainNetworks.MAIN_MATIC]) {
+      if (this.sidechainChainId !== CHAIN_IDS[Networks.SX_MAINNET]) {
         throw new Error(
           `Incorrect sidechain chain ID for production environment. Are you sure the passed sidechain provider is pointing to Polygon mainnet?`
-        );
-      }
-    } else if (this.environment === Environments.MUMBAI) {
-      if (this.sidechainChainId !== CHAIN_IDS[SidechainNetworks.MUMBAI_MATIC]) {
-        throw new Error(
-          `Incorrect sidechain chain ID for mumbai environment. Are you sure the passed sidechain provider is pointing to Mumbai?`
         );
       }
     } else if (this.environment === Environments.SxToronto) {
