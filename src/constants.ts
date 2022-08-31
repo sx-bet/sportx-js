@@ -7,24 +7,13 @@ export const FRACTION_DENOMINATOR = BigNumber.from(10).pow(
   PERCENTAGE_PRECISION_EXPONENT
 );
 
-export enum PublicNetworks {
-  GOERLI = "goerli",
-  MAIN = "main",
-}
-
-export enum SidechainNetworks {
-  MUMBAI_MATIC = "mumbai_matic",
-  MAIN_MATIC = "main_matic",
-}
-
 export enum Networks {
   SX_TORONTO = "sx-toronto",
   SX_MAINNET = "sx-mainnet",
 }
 
 export enum Environments {
-  MUMBAI = "mumbai",
-  SxToronto = "sx_toronto",
+  SxToronto = "toronto",
   SxStage = "stage",
   SxMainnet = "production",
 }
@@ -37,30 +26,25 @@ export enum Tokens {
 }
 
 export const RELAYER_URLS = {
-  [Environments.MUMBAI]: "https://mumbai.api.sportx.bet",
-  [Environments.SxMainnet]: "https://app.api.sportx.bet",
   [Environments.SxToronto]: "https://api.toronto.sx.bet",
   [Environments.SxStage]: "https://api.stage.sx.bet",
   [Environments.SxMainnet]: "https://api.prod.sx.bet",
 };
 
 export const DEFAULT_RPC_URLS = {
-  [Environments.MUMBAI]: "https://rpc-mumbai.matic.today",
-  [Environments.SxMainnet]: "https://rpc.sx.technology",
   [Environments.SxToronto]: "https://rpc.toronto.sx.technology",
   [Environments.SxStage]: "https://rpc.sx.technology",
+  [Environments.SxMainnet]: "https://rpc.sx.technology"
 };
 
 export const TOKEN_TRANSFER_PROXY_ADDRESS = {
-  [Environments.MUMBAI]: "0xa6Fd088CCce831E562ef7B580a7c50BD7aE2B761",
-  [Environments.SxMainnet]: "0xCc4fBba7D0E0F2A03113F42f5D3aE80d9B2aD55d",
   [Environments.SxToronto]: "0x6681293989e06a4E7c7e18c13C1AE13925BdfdB7",
   [Environments.SxStage]: "0xA82Aec37d413dBF27bc4A6b830C14C145ffF9279",
+  [Environments.SxMainnet]: "0xCc4fBba7D0E0F2A03113F42f5D3aE80d9B2aD55d",
 };
 
 
 export const EIP712_VERSION = {
-  [Environments.MUMBAI]: "3.0",
   [Environments.SxMainnet]: "4.0",
   [Environments.SxToronto]: "4.0",
   [Environments.SxStage]: "4.0",
@@ -75,37 +59,11 @@ interface INestedStringObj {
 }
 
 export const CHAIN_IDS = {
-  [PublicNetworks.GOERLI]: 5,
-  [PublicNetworks.MAIN]: 1,
-  [SidechainNetworks.MAIN_MATIC]: 137,
-  [SidechainNetworks.MUMBAI_MATIC]: 80001,
   [Networks.SX_TORONTO]: 647,
   [Networks.SX_MAINNET]: 416,
 };
 
 export const TOKEN_ADDRESSES: INestedStringObj = {
-  [SidechainNetworks.MUMBAI_MATIC]: {
-    [Tokens.DAI]: "0x6A383cf1F8897585718DCA629a8f1471339abFe4",
-    [Tokens.WETH]: "0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa",
-    [Tokens.SPORTX]: "0xDEA6BC85D436Ce75026916dffa9dc14325C87B5F",
-    [Tokens.USDC]: "0xa25dA0331Cd053FD17C47c8c34BCCBAaF516C438",
-  },
-  [PublicNetworks.GOERLI]: {
-    [Tokens.DAI]: "0xEc94ecC0662A62C7D805f278AF73E3BE37Bb717e",
-    [Tokens.SPORTX]: "0x79ECd185478882c1075f9972587D6c1d59d1A44f",
-    [Tokens.USDC]: "0xf278Af28D82c58Da6d97d70DA64786092734A947",
-  },
-  [SidechainNetworks.MAIN_MATIC]: {
-    [Tokens.DAI]: "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063",
-    [Tokens.WETH]: "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619",
-    [Tokens.SPORTX]: "0x840195888Db4D6A99ED9F73FcD3B225Bb3cB1A79",
-    [Tokens.USDC]: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
-  },
-  [PublicNetworks.MAIN]: {
-    [Tokens.DAI]: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
-    [Tokens.SPORTX]: "0x99fE3B1391503A1bC1788051347A1324bff41452",
-    [Tokens.USDC]: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-  },
   [Networks.SX_TORONTO]: {
     [Tokens.WETH]: "0x93964E8d07585672b4d38E5F88E674fF2C418B02",
     [Tokens.USDC]: "0x5147891461a7C81075950f8eE6384e019e39ab98",
@@ -119,16 +77,14 @@ export const TOKEN_ADDRESSES: INestedStringObj = {
 };
 
 export const FILL_ORDER_ADDRESS = {
-  [Environments.MUMBAI]: "0x4Cd6F9b67b9c5616A526d5251d9CEF1BF97E99bB",
-  [Environments.SxMainnet]: "0xF3440625e1751208350384d11C5AC89ed2b6eEb2",
+  [Environments.SxToronto]: "0x5eC99Afcc00876AF7bd75eC2BC82D9Db220ca7F8",
   [Environments.SxStage]: "0xDE9C81f453a31832925E5E9D0a2C86E5786eaaca",
+  [Environments.SxMainnet]: "0xF3440625e1751208350384d11C5AC89ed2b6eEb2",
 };
-
 export const EIP712_FILL_HASHER_ADDRESSES = {
-  [Environments.MUMBAI]: "0x9B830735E38b96FA0d9e934E3cC901bfa4A9C508",
-  [Environments.SxMainnet]: "0x3E96B0a25d51e3Cc89C557f152797c33B839968f",
   [Environments.SxToronto]: "0xd29EA8FB542BcA706c374b008f87344062a530e9",
-  [Environments.SxStage]: "0xb2d7C177FFF04E2BE8CeFFa67955dEF19eac70e8"
+  [Environments.SxStage]: "0xb2d7C177FFF04E2BE8CeFFa67955dEF19eac70e8",
+  [Environments.SxMainnet]: "0x3E96B0a25d51e3Cc89C557f152797c33B839968f"
 };
 
 export const RELAYER_HTTP_ENDPOINTS = {
@@ -154,20 +110,6 @@ export const RELAYER_HTTP_ENDPOINTS = {
 };
 
 export const TokenDecimalMapping: { [address: string]: number } = {
-  [TOKEN_ADDRESSES[SidechainNetworks.MUMBAI_MATIC][Tokens.DAI]]: 18,
-  [TOKEN_ADDRESSES[SidechainNetworks.MUMBAI_MATIC][Tokens.WETH]]: 18,
-  [TOKEN_ADDRESSES[SidechainNetworks.MUMBAI_MATIC][Tokens.SPORTX]]: 18,
-  [TOKEN_ADDRESSES[SidechainNetworks.MUMBAI_MATIC][Tokens.USDC]]: 6,
-  [TOKEN_ADDRESSES[PublicNetworks.GOERLI][Tokens.DAI]]: 18,
-  [TOKEN_ADDRESSES[PublicNetworks.GOERLI][Tokens.SPORTX]]: 18,
-  [TOKEN_ADDRESSES[PublicNetworks.GOERLI][Tokens.USDC]]: 6,
-  [TOKEN_ADDRESSES[SidechainNetworks.MAIN_MATIC][Tokens.DAI]]: 18,
-  [TOKEN_ADDRESSES[SidechainNetworks.MAIN_MATIC][Tokens.WETH]]: 18,
-  [TOKEN_ADDRESSES[SidechainNetworks.MAIN_MATIC][Tokens.SPORTX]]: 18,
-  [TOKEN_ADDRESSES[SidechainNetworks.MAIN_MATIC][Tokens.USDC]]: 6,
-  [TOKEN_ADDRESSES[PublicNetworks.MAIN][Tokens.DAI]]: 18,
-  [TOKEN_ADDRESSES[PublicNetworks.MAIN][Tokens.SPORTX]]: 18,
-  [TOKEN_ADDRESSES[PublicNetworks.MAIN][Tokens.USDC]]: 6,
   [TOKEN_ADDRESSES[Networks.SX_TORONTO][Tokens.WETH]]: 18,
   [TOKEN_ADDRESSES[Networks.SX_TORONTO][Tokens.SPORTX]]: 18,
   [TOKEN_ADDRESSES[Networks.SX_TORONTO][Tokens.USDC]]: 6,
