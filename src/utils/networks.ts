@@ -17,6 +17,8 @@ export function getSidechainNetwork(environment: Environments) {
       return SidechainNetworks.MUMBAI_MATIC;
     case Environments.PRODUCTION:
       return SidechainNetworks.MAIN_MATIC;
+    case Environments.SXN:
+      return SidechainNetworks.SXN;
     default:
       throw new Error(`Unkown environment ${environment}`);
   }
