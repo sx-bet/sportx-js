@@ -131,83 +131,83 @@ describe("sportx", () => {
     expect(response.status).to.equal("success");
   });
 
-// it("should cancel orders by event", async () => {
-//   const response = await sportX.cancelOrdersByEvent(testSportXeventId);
-//   expect(response.status).to.equal("success");
-// });
+it("should cancel orders by event", async () => {
+  const response = await sportX.cancelOrdersByEvent(testSportXeventId);
+  expect(response.status).to.equal("success");
+});
 
-//   it("should cancel all orders", async () => {
-//     const response = await sportX.cancelAllOrders();
-//     expect(response.status).to.equal("success");
-//   });
+  it("should cancel all orders", async () => {
+    const response = await sportX.cancelAllOrders();
+    expect(response.status).to.equal("success");
+  });
 
-//   it("should cancel an order", async () => {
-//     const newOrder: INewOrder = {
-//       marketHash: testMarketHash,
-//       totalBetSize: convertToTrueTokenAmount(
-//       400,
-//         TOKEN_ADDRESSES[getNetwork(env)][Tokens.SPORTX]
-//       ).toString(),
-//       percentageOdds: convertToAPIPercentageOdds(0.5).toString(),
-//       expiry: Math.floor((Date.now() + 3600 * 1000) / 1000),
-//       isMakerBettingOutcomeOne: true,
-//       baseToken: TOKEN_ADDRESSES[getNetwork(env)][Tokens.SPORTX],
-//     };
-//     const {
-//       data: { orders },
-//     } = await sportX.newOrder([newOrder]);
-//     const response = await sportX.cancelOrder(orders);
-//     expect(response.status).to.equal("success");
-//   });
+  it("should cancel an order", async () => {
+    const newOrder: INewOrder = {
+      marketHash: testMarketHash,
+      totalBetSize: convertToTrueTokenAmount(
+      400,
+        TOKEN_ADDRESSES[getNetwork(env)][Tokens.SPORTX]
+      ).toString(),
+      percentageOdds: convertToAPIPercentageOdds(0.5).toString(),
+      expiry: Math.floor((Date.now() + 3600 * 1000) / 1000),
+      isMakerBettingOutcomeOne: true,
+      baseToken: TOKEN_ADDRESSES[getNetwork(env)][Tokens.SPORTX],
+    };
+    const {
+      data: { orders },
+    } = await sportX.newOrder([newOrder]);
+    const response = await sportX.cancelOrder(orders);
+    expect(response.status).to.equal("success");
+  });
 
-//   it("should convert from protocol percentage odds", () => {
-//     const odds = "88985727650227679586";
-//     const convertedOdds = convertFromAPIPercentageOdds(odds);
-//     expect(convertedOdds).to.equal(0.8898572765022768);
-//   });
+  it("should convert from protocol percentage odds", () => {
+    const odds = "88985727650227679586";
+    const convertedOdds = convertFromAPIPercentageOdds(odds);
+    expect(convertedOdds).to.equal(0.8898572765022768);
+  });
 
-//   it("should get active orders for an address", async () => {
-//     const orders = await sportX.getOrders([testMarketHash]);
-//     const maker = orders[0].maker;
-//     const activeOrders = await sportX.getOrders(undefined, maker);
-//     expect(Object.keys(activeOrders).length).greaterThan(0);
-//   });
+  it("should get active orders for an address", async () => {
+    const orders = await sportX.getOrders([testMarketHash]);
+    const maker = orders[0].maker;
+    const activeOrders = await sportX.getOrders(undefined, maker);
+    expect(Object.keys(activeOrders).length).greaterThan(0);
+  });
 
-//   it("should get active orders for a market", async () => {
-//     const orders = await sportX.getOrders([testMarketHash]);
-//     expect(orders.length).greaterThan(0);
-//   });
+  it("should get active orders for a market", async () => {
+    const orders = await sportX.getOrders([testMarketHash]);
+    expect(orders.length).greaterThan(0);
+  });
 
-//   it("should get pending bets", async () => {
-//     const payload: IPendingBetsRequest = {
-//       bettor: wallet.address,
-//     };
-//     const result = await sportX.getPendingOrFailedBets(payload);
-//   });
+  it("should get pending bets", async () => {
+    const payload: IPendingBetsRequest = {
+      bettor: wallet.address,
+    };
+    const result = await sportX.getPendingOrFailedBets(payload);
+  });
 
-//   it("should get trades", async () => {
-//     const response = await sportX.getTrades({});
-//     expect(response.trades.length).greaterThan(0);
-//   });
+  it("should get trades", async () => {
+    const response = await sportX.getTrades({});
+    expect(response.trades.length).greaterThan(0);
+  });
 
-//   it("should fill an order", async () => {
-//     const orders = await sportX.getOrders(
-//       [testMarketHash],
-//       undefined,
-//       TOKEN_ADDRESSES[getNetwork(env)][Tokens.SPORTX]
-//     );
-//     const oneSidedOrders = orders.filter(
-//       (order) => order.isMakerBettingOutcomeOne
-//     );
-//     const fill = await sportX.fillOrders(
-//       oneSidedOrders,
-//       oneSidedOrders.map((o) =>
-//         convertToTrueTokenAmount(
-//           30,
-//           TOKEN_ADDRESSES[getNetwork(env)][Tokens.SPORTX]
-//         )
-//       )
-//     );
-//     expect(fill.status).to.equal("success");
-//   });
+  it("should fill an order", async () => {
+    const orders = await sportX.getOrders(
+      [testMarketHash],
+      undefined,
+      TOKEN_ADDRESSES[getNetwork(env)][Tokens.SPORTX]
+    );
+    const oneSidedOrders = orders.filter(
+      (order) => order.isMakerBettingOutcomeOne
+    );
+    const fill = await sportX.fillOrders(
+      oneSidedOrders,
+      oneSidedOrders.map((o) =>
+        convertToTrueTokenAmount(
+          30,
+          TOKEN_ADDRESSES[getNetwork(env)][Tokens.SPORTX]
+        )
+      )
+    );
+    expect(fill.status).to.equal("success");
+  });
 });
