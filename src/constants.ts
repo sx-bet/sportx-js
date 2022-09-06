@@ -19,7 +19,6 @@ export enum Environments {
 }
 
 export enum Tokens {
-  DAI = "DAI",
   WETH = "WETH",
   SPORTX = "SX",
   USDC = "USDC",
@@ -104,7 +103,6 @@ export const RELAYER_HTTP_ENDPOINTS = {
   CANCEL_EVENT_ORDERS: "/orders/cancel/event",
   CANCEL_ALL_ORDERS: "/orders/cancel/all",
   TRADES: "/trades",
-  DAI_APPROVAL: "/user/approve-proxy",
   USER_TOKEN: "/user/token",
   LIVE_SCORES: "/live-scores",
 };
