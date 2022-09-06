@@ -35,7 +35,7 @@ You can do the following things with this API:
 15. Subscribe to active orders
 16. Lookup markets
 
-We support betting in DAI, WETH, and USDC
+We support betting in WSX, WETH, and USDC
 
 In any case, to get started, you can either initialize via your ethereum private key or initialize via an existing web3 instance. Examples below assuming you are using environment variables to store sensitive information.
 
