@@ -28,7 +28,7 @@ export enum Tokens {
 export const RELAYER_URLS = {
   [Environments.SxToronto]: "https://api.toronto.sx.bet",
   [Environments.SxStage]: "https://api.stage.sx.bet",
-  [Environments.SxMainnet]: "https://api.prod.sx.bet",
+  [Environments.SxMainnet]: "https://api.sx.bet",
 };
 
 export const DEFAULT_RPC_URLS = {
