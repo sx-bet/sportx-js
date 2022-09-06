@@ -1,22 +1,13 @@
-import { Environments, PublicNetworks, SidechainNetworks } from "../constants";
+import { Environments, Networks } from "../constants";
 
-export function getMainchainNetwork(environment: Environments) {
+export function getNetwork(environment: Environments) {
   switch (environment) {
-    case Environments.MUMBAI:
-      return PublicNetworks.GOERLI;
-    case Environments.PRODUCTION:
-      return PublicNetworks.MAIN;
-    default:
-      throw new Error(`Unknown environment ${environment}`);
-  }
-}
-
-export function getSidechainNetwork(environment: Environments) {
-  switch (environment) {
-    case Environments.MUMBAI:
-      return SidechainNetworks.MUMBAI_MATIC;
-    case Environments.PRODUCTION:
-      return SidechainNetworks.MAIN_MATIC;
+    case Environments.SxToronto:
+      return Networks.SX_TORONTO;
+    case Environments.SxStage:
+      return Networks.SX_MAINNET;
+    case Environments.SxMainnet:
+      return Networks.SX_MAINNET;
     default:
       throw new Error(`Unkown environment ${environment}`);
   }

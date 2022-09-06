@@ -1,4 +1,5 @@
 export {
+  DEFAULT_RPC_URLS,
   EIP712_FILL_HASHER_ADDRESSES,
   Environments,
   FILL_ORDER_ADDRESS,
