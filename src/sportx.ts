@@ -41,6 +41,7 @@ import {
   ICancelEventOrdersRequest,
   ICancelOrderRequest,
   IDetailedRelayerMakerOrder,
+  IGetActiveMarketsResponse,
   IGetTradesRequest,
   ILeague,
   ILiveScore,
@@ -89,8 +90,10 @@ export interface ISportX {
     eventId?: number,
     leagueId?: string,
     liveOnly?: boolean,
-    betGroup?: string
-  ): Promise<IMarket[]>;
+    betGroup?: string,
+    paginationKey? :string,
+    pageSize? : number
+  ): Promise<IGetActiveMarketsResponse>;
   getPopularMarkets(): Promise<IMarket[]>;
   marketLookup(marketHashes: string[]): Promise<IMarket[]>;
   newOrder(orders: INewOrder[]): Promise<IRelayerResponse>;
@@ -440,8 +443,10 @@ class SportX implements ISportX {
     eventId?: number,
     leagueId?: string,
     liveOnly?: boolean,
-    betGroup?: string
-  ): Promise<IMarket[]> {
+    betGroup?: string,
+    paginationKey?: string,
+    pageSize?: number
+  ): Promise<IGetActiveMarketsResponse> {
     this.debug("getActiveMarkets");
     const qs = queryString.stringify({
       ...(mainLinesOnly !== undefined && { onlyMainLine: mainLinesOnly }),
@@ -449,6 +454,8 @@ class SportX implements ISportX {
       ...(eventId !== undefined && { eventId }),
       ...(liveOnly !== undefined && { liveOnly }),
       ...(betGroup !== undefined && { betGroup }),
+      ...(paginationKey !== undefined && { paginationKey }),
+      ...(pageSize !== undefined && { pageSize }),
     });
     const url = `${this.relayerUrl}${RELAYER_HTTP_ENDPOINTS.ACTIVE_MARKETS}?${qs}`;
     const response = await fetch(url);
@@ -459,9 +466,13 @@ class SportX implements ISportX {
     this.debug("Relayer response");
     this.debug(result);
     const {
-      data: { markets },
+      data: { markets, nextKey },
     } = result;
-    return markets as IMarket[];
+    const getActiveMarketsResponse: IGetActiveMarketsResponse = {
+      markets,
+      nextKey
+    };
+    return getActiveMarketsResponse;
   }
 
   public async marketLookup(marketHashes: string[]): Promise<IMarket[]> {

@@ -1,16 +1,16 @@
 # sportx-js
 
-Be your own bookmaker and fill orders programmatically with the SportX API!
+Be your own bookmaker and fill orders programmatically with the SX Bet API!
 
 Questions? [Join our chat](https://discord.gg/xXUynCX)
 
 ## Install
 
-`yarn add @sportx-bet/sportx-js`
+`yarn add @sx-bet/sportx-js`
 
 or
 
-`npm i @sportx-bet/sportx-js`
+`npm i @sx-bet/sportx-js`
 
 This library is compiled down to es6 and works in node and the browser.
 
@@ -44,7 +44,7 @@ In any case, to get started, you can either initialize via your ethereum private
 For this you will need a URL of an Ethereum provider to connect to the network along with your Ethereum private key. For the provider url you can connect to https://rpc.sx.technology for SxStage & SxMainnet environment. For toronto, use this provider url https://rpc.sx.technology instead. This will get you connected to the SX chain. Make sure you pass in the correct urls for with the righ environments.
 
 ```typescript
-import { Environments, newSportX } from "@sportx-bet/sportx-js";
+import { Environments, newSportX } from "@sx-bet/sportx-js";
 
 async function main() {
   const sportX = await newSportX(
@@ -68,7 +68,7 @@ Note that you do not need a SportX API key to get started.
 ### Initializing via an existing web3 instance.
 
 ```typescript
-import { Environments, newSportX } from "@sportx-bet/sportx-js";
+import { Environments, newSportX } from "@sx-bet/sportx-js";
 import { providers } from "ethers";
 
 async function main() {
@@ -340,7 +340,7 @@ import moment from "moment";
 import {
   convertToAPIPercentageOdds,
   convertToTrueTokenAmount
-} from "@sportx-bet/sportx-js";
+} from "@sx-bet/sportx-js";
 
 const activeMarkets = await sportX.getActiveMarkets();
 const firstMarketHash = activeMarkets[0].marketHash;
@@ -472,7 +472,7 @@ Explanation of the fields:
 `fillAmount` is how much this order is filled by in Ethereum units. To convert to a readable amount you can use:
 
 ```typescript
-import { convertToDisplayAmount } from "@sportx-bet/sportx-js";
+import { convertToDisplayAmount } from "@sx-bet/sportx-js";
 console.log(convertToDisplayAmount("150000000000000000000"));
 ```
 
@@ -491,7 +491,7 @@ which produces "150"
 `percentageOdds` is the implied odds the maker is receiving for this order. To convert into a readable implied odds, you can use:
 
 ```typescript
-import { convertFromAPIPercentageOdds } from "@sportx-bet/sportx-js";
+import { convertFromAPIPercentageOdds } from "@sx-bet/sportx-js";
 
 const odds = "88985727650227679586";
 const convertedOdds = convertFromAPIPercentageOdds(odds);
