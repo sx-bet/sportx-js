@@ -120,7 +120,7 @@ const data = await sportX.getActiveMarkets({
 console.log(`active markets: ${data.markets}`);
 console.log(`next pagination key: ${data.nextKey}`);
 ```
-Which produces an object that contains two values: 
+The above produces an object that contains two values: 
 
 1) markets: Which produces an **array** of objects with the following schema:
 
