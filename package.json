@@ -68,5 +68,5 @@
     "test": "rm -rf dist/ && tsc && mocha \"dist/test/*.js\" --timeout 120000 --exit --bail",
     "format": "tslint --fix -c tslint.json 'test/**/*.ts' 'src/**/*.ts' && prettier --write 'test/**/*.ts' 'src/**/*.ts'"
   },
-  "version": "13.0.0"
+  "version": "13.0.1"
 }
