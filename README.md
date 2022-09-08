@@ -1,6 +1,6 @@
 # sportx-js
 
-Be your own bookmaker and fill orders programmatically with the SportX API!
+Be your own bookmaker and fill orders programmatically with the SX Bet API!
 
 Questions? [Join our chat](https://discord.gg/xXUynCX)
 

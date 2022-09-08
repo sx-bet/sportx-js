@@ -194,6 +194,11 @@ export interface IPendingBet {
   baseToken: string;
 }
 
+export interface IGetActiveMarketsResponse {
+  markets: IMarket[];
+  nextKey: string;
+}
+
 export interface IMarket {
   status: string;
   marketHash: string;
