@@ -20,8 +20,8 @@
     "eth-sig-util": "^2.5.2",
     "query-string": "^6.9.0"
   },
-  "repository": "github:sportx-bet/sportx-js",
-  "homepage": "https://github.com/sportx-bet/sportx-js",
+  "repository": "github:sx-bet/sportx-js",
+  "homepage": "https://github.com/sx-bet/sportx-js",
   "license": "MIT",
   "keywords": [
     "betX",
