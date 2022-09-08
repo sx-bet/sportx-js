@@ -41,6 +41,7 @@ import {
   ICancelEventOrdersRequest,
   ICancelOrderRequest,
   IDetailedRelayerMakerOrder,
+  IGetActiveMarketsRequest,
   IGetActiveMarketsResponse,
   IGetTradesRequest,
   ILeague,
@@ -86,14 +87,8 @@ export interface ISportX {
   getSports(): Promise<ISport[]>;
   getActiveLeagues(): Promise<ILeague[]>;
   getActiveMarkets(
-    mainLinesOnly?: boolean,
-    eventId?: number,
-    leagueId?: string,
-    liveOnly?: boolean,
-    betGroup?: string,
-    paginationKey? :string,
-    pageSize? : number
-  ): Promise<IGetActiveMarketsResponse>;
+    activeMarketsRequest: IGetActiveMarketsRequest
+    ): Promise<IGetActiveMarketsResponse>;
   getPopularMarkets(): Promise<IMarket[]>;
   marketLookup(marketHashes: string[]): Promise<IMarket[]>;
   newOrder(orders: INewOrder[]): Promise<IRelayerResponse>;
@@ -439,15 +434,18 @@ class SportX implements ISportX {
   }
 
   public async getActiveMarkets(
-    mainLinesOnly?: boolean,
-    eventId?: number,
-    leagueId?: string,
-    liveOnly?: boolean,
-    betGroup?: string,
-    paginationKey?: string,
-    pageSize?: number
+    activeMarketsRequest: IGetActiveMarketsRequest
   ): Promise<IGetActiveMarketsResponse> {
     this.debug("getActiveMarkets");
+    const {
+      mainLinesOnly,
+      leagueId,
+      eventId,
+      liveOnly,
+      betGroup,
+      paginationKey,
+      pageSize
+    } = activeMarketsRequest;
     const qs = queryString.stringify({
       ...(mainLinesOnly !== undefined && { onlyMainLine: mainLinesOnly }),
       ...(leagueId !== undefined && { leagueId }),

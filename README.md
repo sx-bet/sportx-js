@@ -105,12 +105,24 @@ As a foreword the wrapper throws errors if parameters are bad, mismatched, or th
 
 ### Get all the active markets
 
-```typescript
-const activeMarkets = await sportX.getActiveMarkets();
-console.log(activeMarkets);
-```
+This function uses pagination to retrieve active market data. The response will contain two values: **markets** and **nextKey**. For the next set of markets, the paginationKey must be provided.
 
-Which produces an **array** of objects with the following schema:
+Field Notes: 
+- paginationKey (optional) - needed to iterate over all markets
+- pageSize (optional) - the default AND max pageSize value is 50
+
+```typescript
+const data = await sportX.getActiveMarkets({
+  paginationKey: "<myPaginationKey>",
+  pageSize: 10
+});
+
+console.log(`active markets: ${data.markets}`);
+console.log(`next pagination key: ${data.nextKey}`);
+```
+The above produces an object that contains two values: 
+
+1) markets: Which produces an **array** of objects with the following schema:
 
 ```typescript
 interface IMarket {
@@ -139,6 +151,8 @@ interface IMarket {
   leagueLabel?: string;
 }
 ```
+
+2) nextKey: Which provides a string value of the next **paginationKey**.
 
 The `sportId` and `leagueId`'s actual names can be found by fetching the leagues and sports. See below.
 

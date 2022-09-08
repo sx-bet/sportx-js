@@ -29,6 +29,16 @@ export interface IRelayerHistoricalMarketRequest {
   marketHashes: string[];
 }
 
+export interface IGetActiveMarketsRequest {
+  mainLinesOnly?: boolean;
+  eventId?: number;
+  leagueId?: string;
+  liveOnly?: boolean;
+  betGroup?: string;
+  paginationKey? :string;
+  pageSize? : number;
+}
+
 export interface IGetTradesRequest {
   startDate?: number;
   endDate?: number;
