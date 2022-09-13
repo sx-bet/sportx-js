@@ -47,18 +47,18 @@ For this you will need a URL of an Ethereum provider to connect to the network a
 import { Environments, newSportX } from "@sx-bet/sportx-js";
 
 async function main() {
-  const sportX = await newSportX(
-    Environments.SxMainnet,
-    process.env.ETHEREUM_PRIVATE_KEY,
-    process.env.PROVIDER_URL
-  );
+  const sportX = await newSportX({
+    env: Environments.SxToronto,
+    customSidechainProviderUrl: process.env.PROVIDER,
+    privateKey: process.env.PRIVATE_KEY,
+  });
   // or 
 
-  const sportXToronto = await newSportX(
-    Environments.SxToronto,
-    process.env.ETHEREUM_PRIVATE_KEY,
-    process.env.SX_TORONTO_PROVIDER_URL
-  )
+  const sportXToronto = await newSportX({
+    env: Environments.SxToronto,
+    customSidechainProviderUrl: process.env.PROVIDER,
+    privateKey: process.env.PRIVATE_KEY,
+})
 
 }
 ```
@@ -72,12 +72,10 @@ import { Environments, newSportX } from "@sx-bet/sportx-js";
 import { providers } from "ethers";
 
 async function main() {
-  const sportX = await newSportX(
-    Environments.SxToronto,
-    undefined,
-    undefined,
-    new providers.Web3Provider(web3.currentProvider)
-  );
+  const sportX = await newSportX({
+    env: Environments.SxToronto,
+    sidechainProvider: new providers.Web3Provider(web3.currentProvider)
+  });
 }
 ```
 
