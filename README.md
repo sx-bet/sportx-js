@@ -48,16 +48,16 @@ import { Environments, newSportX } from "@sx-bet/sportx-js";
 
 async function main() {
   const sportX = await newSportX({
-    Environments.SxMainnet,
-    process.env.ETHEREUM_PRIVATE_KEY,
-    process.env.PROVIDER_URL
+    env: Environments.SxToronto,
+    customSidechainProviderUrl: process.env.PROVIDER,
+    privateKey: process.env.PRIVATE_KEY,
   });
   // or 
 
   const sportXToronto = await newSportX({
-    Environments.SxToronto,
-    process.env.ETHEREUM_PRIVATE_KEY,
-    process.env.SX_TORONTO_PROVIDER_URL
+    env: Environments.SxToronto,
+    customSidechainProviderUrl: process.env.PROVIDER,
+    privateKey: process.env.PRIVATE_KEY,
 })
 
 }
@@ -73,10 +73,8 @@ import { providers } from "ethers";
 
 async function main() {
   const sportX = await newSportX({
-    Environments.SxToronto,
-    undefined,
-    undefined,
-    new providers.Web3Provider(web3.currentProvider)
+    env: Environments.SxToronto,
+    sidechainProvider: new providers.Web3Provider(web3.currentProvider)
   });
 }
 ```
