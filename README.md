@@ -1,4 +1,4 @@
-# sportx-js
+# sportx-js (DEPRECATED)
 
 Be your own bookmaker and fill orders programmatically with the SX Bet API!
 
